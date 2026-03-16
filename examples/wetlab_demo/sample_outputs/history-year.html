@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Research Planner History Summary · 2026</title>
+  <style>
+    :root {
+      --bg: #f5efe7;
+      --paper: #fffdfa;
+      --ink: #2f241f;
+      --muted: #76685f;
+      --line: #e7dbc9;
+      --shadow: 0 18px 40px rgba(66, 42, 26, 0.08);
+      --done: #1d7559;
+      --partial: #8a6621;
+      --moved: #8a6e63;
+      --incomplete: #9f4740;
+      --conditional: #5e60ce;
+      --pending: #8a6b2b;
+      --unsynced: #954f4f;
+      --planned: #66717f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(240, 204, 156, 0.24), transparent 30%),
+        linear-gradient(180deg, #f7f3ec 0%, var(--bg) 100%);
+    }
+    .shell { max-width: 1600px; margin: 0 auto; padding: 28px; }
+    .hero, .panel {
+      background: rgba(255,253,250,0.95);
+      border: 1px solid rgba(149, 113, 81, 0.13);
+      border-radius: 30px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+    .hero h1, .panel-head h2 { margin: 0; }
+    .hero p, .panel-head p { margin: 0; color: var(--muted); }
+    .hero-top, .panel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: end;
+    }
+    .hero-stats, .stream-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .stat-card, .stream-card {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 16px;
+      background: var(--paper);
+    }
+    .stat-card span {
+      display: block;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .stat-card strong { font-size: 28px; }
+    .panel { margin-top: 22px; }
+    .overview-shell { overflow-x: auto; border-top: 1px solid var(--line); padding-top: 14px; }
+    .overview-row {
+      display: grid;
+      grid-template-columns: 250px minmax(900px, 1fr);
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .overview-stream {
+      background: #f8f1e8;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 14px;
+    }
+    .overview-stream strong { display: block; margin-bottom: 6px; }
+    .overview-stream small { color: var(--muted); }
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+    }
+    .overview-grid-head {
+      grid-template-columns: repeat(12, minmax(160px, 1fr));
+    }
+    .overview-head-cell, .overview-cell {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(249,242,235,0.9));
+      min-height: 92px;
+    }
+    .overview-head-cell small { display: block; color: var(--muted); margin-top: 6px; }
+    .overview-cell ul, .review-card ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 8px;
+    }
+    .overview-cell li, .review-card li {
+      border: 1px solid rgba(123, 100, 83, 0.12);
+      border-radius: 14px;
+      padding: 8px 10px;
+      background: rgba(255,255,255,0.8);
+      display: grid;
+      gap: 6px;
+    }
+    .cell-empty {
+      min-height: 56px;
+      border: 1px dashed rgba(123, 100, 83, 0.25);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.65);
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: white;
+      font-weight: 700;
+    }
+    .status-completed { background: var(--done); }
+    .status-partial { background: var(--partial); }
+    .status-moved { background: var(--moved); }
+    .status-incomplete { background: var(--incomplete); }
+    .status-conditional { background: var(--conditional); }
+    .status-pending-sync { background: var(--pending); }
+    .status-unsynced { background: var(--unsynced); }
+    .status-planned { background: var(--planned); }
+    .reason-row {
+      display: grid;
+      grid-template-columns: minmax(180px, 280px) 1fr 60px;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .reason-track {
+      height: 14px;
+      border-radius: 999px;
+      background: #efe4d6;
+      overflow: hidden;
+    }
+    .reason-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #c5774f, #8f5d33);
+      border-radius: 999px;
+    }
+    .reason-label, .reason-value { color: var(--muted); }
+    .review-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .review-card {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(249,242,235,0.9));
+    }
+    .review-card h3 { margin: 0 0 4px; }
+    .review-sub { margin: 0 0 12px; color: var(--muted); }
+    .review-line-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .review-card strong { display: block; }
+    .review-card p { margin: 0; color: var(--muted); }
+    .review-note { font-size: 13px; }
+    .empty-state {
+      padding: 18px;
+      border: 1px dashed rgba(122, 96, 80, 0.3);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.68);
+      color: var(--muted);
+    }
+    .empty-state.small { padding: 12px; font-size: 14px; }
+    @media (max-width: 960px) {
+      .overview-row { grid-template-columns: 220px minmax(720px, 1fr); }
+    }
+    @media (max-width: 720px) {
+      .shell { padding: 16px; }
+      .overview-row { grid-template-columns: 180px minmax(620px, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <p>Research Planner Template · History Summary</p>
+          <h1>2026</h1>
+          <p>Year summary generated from archived planner records. Display time zone: Asia/Shanghai.</p>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <article class="stat-card"><span>Done</span><strong>4</strong></article>
+        <article class="stat-card"><span>Moved / Incomplete</span><strong>0</strong></article>
+        <article class="stat-card"><span>Conditional</span><strong>0</strong></article>
+        <article class="stat-card"><span>Pending Sync</span><strong>4</strong></article>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>Delay Reasons</h2><p>Automatic classification based on titles and status notes.</p></div>
+      <div class="empty-state">No moved or incomplete records were archived for this period.</div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>Workstream Stats</h2><p>Archived record counts grouped by workstream.</p></div>
+      <div class="stream-grid"><article class="stream-card"><h3>Analysis / Slides</h3><p>1 records</p><div class="stream-line"><span>0 done</span><span>0 moved</span><span>0 conditional</span><span>1 unsynced</span></div></article><article class="stream-card"><h3>Cell Expansion</h3><p>3 records</p><div class="stream-line"><span>3 done</span><span>0 moved</span><span>0 conditional</span><span>0 unsynced</span></div></article><article class="stream-card"><h3>3D Models</h3><p>1 records</p><div class="stream-line"><span>0 done</span><span>0 moved</span><span>0 conditional</span><span>1 unsynced</span></div></article><article class="stream-card"><h3>Assays / Flow</h3><p>2 records</p><div class="stream-line"><span>0 done</span><span>0 moved</span><span>0 conditional</span><span>2 unsynced</span></div></article><article class="stream-card"><h3>Animal Work</h3><p>1 records</p><div class="stream-line"><span>1 done</span><span>0 moved</span><span>0 conditional</span><span>0 unsynced</span></div></article></div>
+    </section>
+    <section class="panel"><div class="panel-head"><h2>Monthly Milestones</h2><p>Year view shows milestone density by month rather than day-level timing.</p></div><div class="overview-shell"><div class="overview-row overview-head"><div class="overview-stream overview-stream-head">Workstream</div><div class="overview-grid overview-grid-head"><div class="overview-head-cell"><strong>Jan</strong></div><div class="overview-head-cell"><strong>Feb</strong></div><div class="overview-head-cell"><strong>Mar</strong></div><div class="overview-head-cell"><strong>Apr</strong></div><div class="overview-head-cell"><strong>May</strong></div><div class="overview-head-cell"><strong>Jun</strong></div><div class="overview-head-cell"><strong>Jul</strong></div><div class="overview-head-cell"><strong>Aug</strong></div><div class="overview-head-cell"><strong>Sep</strong></div><div class="overview-head-cell"><strong>Oct</strong></div><div class="overview-head-cell"><strong>Nov</strong></div><div class="overview-head-cell"><strong>Dec</strong></div></div></div><div class="overview-row"><div class="overview-stream"><strong>Analysis / Slides</strong><small>1 active buckets</small></div><div class="overview-grid"><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><ul><li><span class="status-badge status-pending-sync">Pending Sync</span><span>Update RNA slide deck and figures</span></li></ul></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div></div></div><div class="overview-row"><div class="overview-stream"><strong>Cell Expansion</strong><small>1 active buckets</small></div><div class="overview-grid"><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><ul><li><span class="status-badge status-completed">Completed</span><span>Seed 3D spheroid plates</span></li><li><span class="status-badge status-completed">Completed</span><span>Passage anchor culture for expansion</span></li><li><span class="status-badge status-partial">Partially Done</span><span>Expand GFP reporter culture 5 flasks to…</span></li></ul></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div></div></div><div class="overview-row"><div class="overview-stream"><strong>3D Models</strong><small>1 active buckets</small></div><div class="overview-grid"><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><ul><li><span class="status-badge status-pending-sync">Pending Sync</span><span>Check spheroid morphology day 1</span></li></ul></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div></div></div><div class="overview-row"><div class="overview-stream"><strong>Assays / Flow</strong><small>1 active buckets</small></div><div class="overview-grid"><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><ul><li><span class="status-badge status-pending-sync">Pending Sync</span><span>Run 0h surface labeling flow panel</span></li><li><span class="status-badge status-pending-sync">Pending Sync</span><span>Start uptake assay with dye particle pa…</span></li></ul></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div></div></div><div class="overview-row"><div class="overview-stream"><strong>Animal Work</strong><small>1 active buckets</small></div><div class="overview-grid"><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><ul><li><span class="status-badge status-completed">Completed</span><span>Confirm animal cohort arrival and cage …</span></li></ul></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div><div class="overview-cell"><div class="cell-empty"></div></div></div></div></div></section>
+    <section class="panel"><div class="panel-head"><h2>Monthly Review</h2><p>Monthly review summarizes the archived movement for each month.</p></div><div class="review-grid"><article class="review-card"><h3>Jan</h3><div class="empty-state small">No archived records for this bucket.</div></article><article class="review-card"><h3>Feb</h3><div class="empty-state small">No archived records for this bucket.</div></article><article class="review-card"><h3>Mar</h3><ul><li><div class="review-line-top"><span>Cell Expansion</span><span class="status-badge status-completed">Completed</span></div><strong>Seed 3D spheroid plates</strong><p class="review-note">Seeded ten wells with the same starting density.</p></li><li><div class="review-line-top"><span>Cell Expansion</span><span class="status-badge status-completed">Completed</span></div><strong>Passage anchor culture for expansion</strong><p class="review-note">One flask was retained as the anchor culture.</p></li><li><div class="review-line-top"><span>Cell Expansion</span><span class="status-badge status-partial">Partially Done</span></div><strong>Expand GFP reporter culture 5 flasks to 10 flasks</strong><p class="review-note">The culture expanded to ten flasks but growth remains slower than baseline after thaw.</p></li><li><div class="review-line-top"><span>Assays / Flow</span><span class="status-badge status-pending-sync">Pending Sync</span></div><strong>Run 0h surface labeling flow panel</strong></li><li><div class="review-line-top"><span>Assays / Flow</span><span class="status-badge status-pending-sync">Pending Sync</span></div><strong>Start uptake assay with dye particle panel</strong></li><li><div class="review-line-top"><span>Analysis / Slides</span><span class="status-badge status-pending-sync">Pending Sync</span></div><strong>Update RNA slide deck and figures</strong></li><li><div class="review-line-top"><span>3D Models</span><span class="status-badge status-pending-sync">Pending Sync</span></div><strong>Check spheroid morphology day 1</strong></li><li><div class="review-line-top"><span>Animal Work</span><span class="status-badge status-completed">Completed</span></div><strong>Confirm animal cohort arrival and cage assignment</strong><p class="review-note">Twenty five-week-old male mice were confirmed in the facility.</p></li></ul></article><article class="review-card"><h3>Apr</h3><div class="empty-state small">No archived records for this bucket.</div></article><article class="review-card"><h3>May</h3><div class="empty-state small">No archived records for this bucket.</div></article><article class="review-card"><h3>Jun</h3><div class="empty-state small">No archived records for this bucket.</div></article><article class="review-card"><h3>Jul</h3><div class="empty-state small">No archived records for this bucket.</div></article><article class="review-card"><h3>Aug</h3><div class="empty-state small">No archived records for this bucket.</div></article><article class="review-card"><h3>Sep</h3><div class="empty-state small">No archived records for this bucket.</div></article><article class="review-card"><h3>Oct</h3><div class="empty-state small">No archived records for this bucket.</div></article><article class="review-card"><h3>Nov</h3><div class="empty-state small">No archived records for this bucket.</div></article><article class="review-card"><h3>Dec</h3><div class="empty-state small">No archived records for this bucket.</div></article></div></section>
+  </div>
+</body>
+</html>

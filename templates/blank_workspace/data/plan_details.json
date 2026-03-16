@@ -1,0 +1,15 @@
+{
+  "streams": [
+    {"id": "rna", "label": "Analysis / Slides"},
+    {"id": "cell", "label": "Cell Expansion"},
+    {"id": "spheroid", "label": "3D Models"},
+    {"id": "flow", "label": "Assays / Flow"},
+    {"id": "material", "label": "Material Characterization"},
+    {"id": "robot", "label": "Motion Tests"},
+    {"id": "mouse", "label": "Animal Work"},
+    {"id": "prep", "label": "Preparation / Follow-up"},
+    {"id": "general", "label": "General"}
+  ],
+  "experiments": [],
+  "days": []
+}

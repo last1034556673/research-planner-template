@@ -1,0 +1,6 @@
+meetings: []
+blocked_days: []
+blocked_windows: []
+weekend_rules:
+  saturday_lab_allowed: true
+  sunday_lab_allowed: true

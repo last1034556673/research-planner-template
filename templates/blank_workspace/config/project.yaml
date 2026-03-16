@@ -1,0 +1,6 @@
+project_name: "My Research Planner"
+timezone: "Asia/Shanghai"
+locale: "en_US"
+primary_language: "en"
+dashboard_window_days: 15
+sync_deadline: "09:30"

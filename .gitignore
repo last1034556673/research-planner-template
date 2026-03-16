@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
+workspace/
+workspace_*/
+examples/wetlab_demo/runtime_workspace/
+*.log
+*.app
+*.ics
+daily_reports/
+history/
+outputs/
