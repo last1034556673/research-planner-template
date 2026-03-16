@@ -1,0 +1,276 @@
+{
+  "streams": [
+    {"id": "rna", "label": "Analysis / Slides"},
+    {"id": "cell", "label": "Cell Expansion"},
+    {"id": "spheroid", "label": "3D Models"},
+    {"id": "flow", "label": "Assays / Flow"},
+    {"id": "material", "label": "Material Characterization"},
+    {"id": "robot", "label": "Motion Tests"},
+    {"id": "mouse", "label": "Animal Work"},
+    {"id": "prep", "label": "Preparation / Follow-up"},
+    {"id": "general", "label": "General"}
+  ],
+  "experiments": [
+    {
+      "id": "exp-cell-imaging",
+      "title": "Anchor Culture Expansion",
+      "stream": "cell",
+      "goal": "Expand the anchor culture, keep reporter cells healthy, and preserve a cohort-ready window.",
+      "steps": [
+        {
+          "date": "2026-03-15",
+          "title_match": "Passage anchor culture for expansion",
+          "notes": [
+            "Keep one flask as the anchor culture.",
+            "Estimate the next passage in about three days."
+          ]
+        },
+        {
+          "date": "2026-03-15",
+          "title_match": "Expand GFP reporter culture 5 flasks to 10 flasks",
+          "notes": [
+            "Record total cell count and average per flask.",
+            "Mark growth as slower than baseline if the post-thaw increase is modest."
+          ]
+        },
+        {
+          "date": "2026-03-17",
+          "title_match": "If reporter culture is ready: expand to 20 flasks and seed spheroids",
+          "decision_rule": "Proceed only if all ten flasks reach the target density at the Tuesday afternoon check.",
+          "notes": [
+            "If density is still low, keep the conditional card active and push the downstream window."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "exp-spheroid",
+      "title": "3D Spheroid Pilot",
+      "stream": "spheroid",
+      "goal": "Seed a ten-well spheroid plate, monitor morphology, then embed compact spheroids in matrix.",
+      "steps": [
+        {
+          "date": "2026-03-15",
+          "title_match": "Seed 3D spheroid plates",
+          "notes": [
+            "Use ten wells with the same starting density.",
+            "Capture the seed count in the lab notebook."
+          ]
+        },
+        {
+          "date": "2026-03-16",
+          "title_match": "Check spheroid morphology day 1",
+          "notes": [
+            "Record whether aggregation is visible in all wells."
+          ]
+        },
+        {
+          "date": "2026-03-18",
+          "title_match": "If spheroids are compact: embed in matrix",
+          "decision_rule": "Embed only if the spheroids are compact and easy to transfer without breaking.",
+          "notes": [
+            "If the morphology is weak, keep the plate in suspension and re-check the next day."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "exp-flow",
+      "title": "Surface Labeling and Uptake Assay",
+      "stream": "flow",
+      "goal": "Run labeling and uptake readouts across multiple time points while tracking stability.",
+      "steps": [
+        {
+          "date": "2026-03-16",
+          "title_match": "Run 0h surface labeling flow panel",
+          "notes": [
+            "Run control, dye-only, and metabolically labeled groups."
+          ]
+        },
+        {
+          "date": "2026-03-17",
+          "title_match": "Run 24h flow timepoint",
+          "notes": [
+            "Keep the same gating strategy for comparability."
+          ]
+        },
+        {
+          "date": "2026-03-20",
+          "title_match": "Run 48h flow timepoint",
+          "notes": [
+            "Archive raw FCS files and note any drift."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "exp-material",
+      "title": "Material Characterization Follow-up",
+      "stream": "material",
+      "goal": "Complete sizing first, then return for zeta potential once the instrument slot opens.",
+      "steps": [
+        {
+          "date": "2026-03-12",
+          "title_match": "DLS readout",
+          "notes": [
+            "Capture count rate, diameter distribution, and batch identifier."
+          ]
+        },
+        {
+          "date": "2026-03-19",
+          "title_match": "Zeta potential measurement",
+          "notes": [
+            "Use the matched buffer condition from the DLS batch."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "exp-animal",
+      "title": "Cohort Readiness Window",
+      "stream": "mouse",
+      "goal": "Keep the animal start dependent on both cell expansion and cohort availability.",
+      "steps": [
+        {
+          "date": "2026-03-16",
+          "title_match": "Confirm animal cohort arrival and cage assignment",
+          "notes": [
+            "Record cohort size, sex, and housing note."
+          ]
+        },
+        {
+          "date": "2026-03-23",
+          "title_match": "If cells and mice are ready: cohort start",
+          "decision_rule": "Only begin if both the expanded cell stock and the animal cohort are available on the same day.",
+          "notes": [
+            "Use this as a gated readiness window rather than a hard promise."
+          ]
+        }
+      ]
+    }
+  ],
+  "days": [
+    {
+      "date": "2026-03-15",
+      "focus": "Rebuild the wet-lab pipeline after the weekend and preserve the cell-expansion chain.",
+      "notes": [
+        "Keep the anchor culture alive.",
+        "Start the 3D model line without forcing downstream commitments."
+      ],
+      "tasks": [
+        {
+          "stream": "spheroid",
+          "title_match": "Seed 3D spheroid plates",
+          "deliverable": "Ten seeded wells with a consistent cell count.",
+          "notes": [
+            "Record the target density per well in the notebook."
+          ]
+        },
+        {
+          "stream": "cell",
+          "title_match": "Passage anchor culture for expansion",
+          "deliverable": "One anchor flask retained for the next passage window."
+        },
+        {
+          "stream": "cell",
+          "title_match": "Expand GFP reporter culture 5 flasks to 10 flasks",
+          "deliverable": "Reporter culture expansion with cell-count note."
+        }
+      ]
+    },
+    {
+      "date": "2026-03-16",
+      "focus": "Start the assay line, review morphology, and close the readiness gaps.",
+      "notes": [
+        "Treat the cohort check as a prerequisite, not as the start itself."
+      ],
+      "tasks": [
+        {
+          "stream": "flow",
+          "title_match": "Run 0h surface labeling flow panel",
+          "deliverable": "0h fluorescence readout for the labeling panel."
+        },
+        {
+          "stream": "flow",
+          "title_match": "Start uptake assay with dye particle panel",
+          "deliverable": "Uptake assay started for the next time point."
+        },
+        {
+          "stream": "rna",
+          "title_match": "Update RNA slide deck and figures",
+          "deliverable": "Near-final slide deck for the weekly review."
+        },
+        {
+          "stream": "spheroid",
+          "title_match": "Check spheroid morphology day 1",
+          "deliverable": "Morphology notes for all ten wells."
+        },
+        {
+          "stream": "mouse",
+          "title_match": "Confirm animal cohort arrival and cage assignment",
+          "deliverable": "Cohort note added to the tracker."
+        }
+      ]
+    },
+    {
+      "date": "2026-03-17",
+      "focus": "Use the density check to decide whether the expansion and spheroid chains can stay on schedule.",
+      "notes": [
+        "This day contains the main conditional junction in the demo."
+      ],
+      "tasks": [
+        {
+          "stream": "flow",
+          "title_match": "Run 24h flow timepoint",
+          "deliverable": "24h fluorescence readout."
+        },
+        {
+          "stream": "cell",
+          "title_match": "If reporter culture is ready: expand to 20 flasks and seed spheroids",
+          "deliverable": "Either expand immediately or reschedule with a reason.",
+          "condition": "Proceed only if the reporter culture reaches the target density in all ten flasks."
+        }
+      ]
+    },
+    {
+      "date": "2026-03-18",
+      "focus": "Check whether the 3D model is ready for matrix embedding.",
+      "tasks": [
+        {
+          "stream": "spheroid",
+          "title_match": "Check spheroid morphology day 2",
+          "deliverable": "Compactness decision for the matrix step."
+        },
+        {
+          "stream": "spheroid",
+          "title_match": "If spheroids are compact: embed in matrix",
+          "deliverable": "Matrix-embedded 3D model or a documented delay.",
+          "condition": "Embed only if the spheroids are compact and easy to transfer."
+        }
+      ]
+    },
+    {
+      "date": "2026-03-19",
+      "focus": "Close the pending characterization gap.",
+      "tasks": [
+        {
+          "stream": "material",
+          "title_match": "Zeta potential measurement",
+          "deliverable": "Zeta potential readout from the matched batch."
+        }
+      ]
+    },
+    {
+      "date": "2026-03-23",
+      "focus": "Treat the cohort start as a gated readiness window.",
+      "tasks": [
+        {
+          "stream": "mouse",
+          "title_match": "If cells and mice are ready: cohort start",
+          "deliverable": "Same-day confirmation of cell and animal readiness.",
+          "condition": "Only begin if both the expanded cell stock and the animal cohort are available."
+        }
+      ]
+    }
+  ]
+}

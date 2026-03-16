@@ -30,9 +30,11 @@ If you want to try the anonymized demo first:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
-python -m planner.cli init --mode demo --workspace ./workspace_demo
+python -m planner.cli --workspace ./workspace_demo init --mode demo
 python -m planner.cli --workspace ./workspace_demo refresh
 ```
+
+Note: `--workspace` is a global CLI option, so it must appear before the subcommand.
 
 ## Using It With AI Agents
 

@@ -1,0 +1,229 @@
+{
+  "version": 1,
+  "generated_at": "2026-03-16T19:15:40.849295+08:00",
+  "report_date": "2026-03-16",
+  "source_report": "daily_reports/2026-03-16.md",
+  "affected_dates": [
+    "2026-03-16"
+  ],
+  "report_payload": {
+    "date": "2026-03-16",
+    "execution": {
+      "completed": [
+        "Confirmed the animal cohort arrival and cage assignment."
+      ],
+      "incomplete": [
+        "The zeta potential measurement remains on Thursday."
+      ],
+      "reasons": [
+        "The instrument slot is only available later in the week."
+      ]
+    },
+    "status": {
+      "cells": [
+        "All cultures are currently healthy."
+      ],
+      "animals": [
+        "Twenty five-week-old male mice were confirmed in the facility."
+      ],
+      "instruments": [
+        "Flow reagents are ready and the zeta slot is booked for Thursday."
+      ]
+    },
+    "analysis": [
+      "Tightened the RNA slide deck and figure wording."
+    ],
+    "tomorrow": [
+      "Run the 24h flow timepoint.",
+      "Decide whether the reporter expansion can proceed."
+    ],
+    "status_candidates": [],
+    "status_log_updated": "data/status_log.json"
+  },
+  "status_updates": [
+    {
+      "date": "2026-03-16",
+      "title_match": "Confirm animal cohort arrival and cage assignment",
+      "status": "completed",
+      "note": "Twenty five-week-old male mice were confirmed in the facility."
+    }
+  ],
+  "calendar_snapshot": {
+    "calendar": "Research",
+    "events": [
+      {
+        "id": "Research|2026-03-16T08:30:00+08:00|Run 0h surface labeling flow panel",
+        "calendar": "Research",
+        "title": "Run 0h surface labeling flow panel",
+        "short_title": "Run 0h surface labeling flow panel",
+        "start": "2026-03-16T08:30:00+08:00",
+        "end": "2026-03-16T09:15:00+08:00",
+        "stream": "flow",
+        "display_streams": [
+          "flow"
+        ],
+        "conditional": false,
+        "status_key": "pending_sync",
+        "status_label": "Pending Sync",
+        "status_note": ""
+      },
+      {
+        "id": "Research|2026-03-16T09:30:00+08:00|Start uptake assay with dye particle panel",
+        "calendar": "Research",
+        "title": "Start uptake assay with dye particle panel",
+        "short_title": "Start uptake assay with dye particle panel",
+        "start": "2026-03-16T09:30:00+08:00",
+        "end": "2026-03-16T10:30:00+08:00",
+        "stream": "flow",
+        "display_streams": [
+          "flow"
+        ],
+        "conditional": false,
+        "status_key": "pending_sync",
+        "status_label": "Pending Sync",
+        "status_note": ""
+      },
+      {
+        "id": "Research|2026-03-16T11:00:00+08:00|Update RNA slide deck and figures",
+        "calendar": "Research",
+        "title": "Update RNA slide deck and figures",
+        "short_title": "Update RNA slide deck and figures",
+        "start": "2026-03-16T11:00:00+08:00",
+        "end": "2026-03-16T12:15:00+08:00",
+        "stream": "rna",
+        "display_streams": [
+          "rna"
+        ],
+        "conditional": false,
+        "status_key": "pending_sync",
+        "status_label": "Pending Sync",
+        "status_note": ""
+      },
+      {
+        "id": "Research|2026-03-16T15:00:00+08:00|Check spheroid morphology day 1",
+        "calendar": "Research",
+        "title": "Check spheroid morphology day 1",
+        "short_title": "Check spheroid morphology day 1",
+        "start": "2026-03-16T15:00:00+08:00",
+        "end": "2026-03-16T15:20:00+08:00",
+        "stream": "spheroid",
+        "display_streams": [
+          "spheroid"
+        ],
+        "conditional": false,
+        "status_key": "pending_sync",
+        "status_label": "Pending Sync",
+        "status_note": ""
+      },
+      {
+        "id": "Research|2026-03-16T17:00:00+08:00|Confirm animal cohort arrival and cage assignment",
+        "calendar": "Research",
+        "title": "Confirm animal cohort arrival and cage assignment",
+        "short_title": "Confirm animal cohort arrival and cage assignment",
+        "start": "2026-03-16T17:00:00+08:00",
+        "end": "2026-03-16T17:30:00+08:00",
+        "stream": "mouse",
+        "display_streams": [
+          "mouse"
+        ],
+        "conditional": false,
+        "status_key": "completed",
+        "status_label": "Completed",
+        "status_note": "Twenty five-week-old male mice were confirmed in the facility."
+      }
+    ]
+  },
+  "plan_summary": {
+    "counts": {
+      "completed": 1,
+      "partial": 0,
+      "moved": 0,
+      "conditional": 0,
+      "unsynced": 4
+    },
+    "reason_counts": {
+      "Cell / sample state": 0,
+      "Instrument / reagent": 0,
+      "Time conflict / non-lab day": 0,
+      "Animals / materials": 0,
+      "Plan change": 0,
+      "Unspecified": 0
+    },
+    "completed_highlights": [
+      "Confirm animal cohort arrival and cage assignment"
+    ],
+    "moved_highlights": []
+  },
+  "event_records": [
+    {
+      "report_date": "2026-03-16",
+      "event_date": "2026-03-16",
+      "title": "Run 0h surface labeling flow panel",
+      "stream": "flow",
+      "stream_label": "Assays / Flow",
+      "planned_start": "2026-03-16T08:30:00+08:00",
+      "planned_end": "2026-03-16T09:15:00+08:00",
+      "status": "pending_sync",
+      "status_note": "",
+      "is_conditional": false,
+      "reason_category": "Instrument / reagent",
+      "source": "calendar"
+    },
+    {
+      "report_date": "2026-03-16",
+      "event_date": "2026-03-16",
+      "title": "Start uptake assay with dye particle panel",
+      "stream": "flow",
+      "stream_label": "Assays / Flow",
+      "planned_start": "2026-03-16T09:30:00+08:00",
+      "planned_end": "2026-03-16T10:30:00+08:00",
+      "status": "pending_sync",
+      "status_note": "",
+      "is_conditional": false,
+      "reason_category": "Instrument / reagent",
+      "source": "calendar"
+    },
+    {
+      "report_date": "2026-03-16",
+      "event_date": "2026-03-16",
+      "title": "Update RNA slide deck and figures",
+      "stream": "rna",
+      "stream_label": "Analysis / Slides",
+      "planned_start": "2026-03-16T11:00:00+08:00",
+      "planned_end": "2026-03-16T12:15:00+08:00",
+      "status": "pending_sync",
+      "status_note": "",
+      "is_conditional": false,
+      "reason_category": "Instrument / reagent",
+      "source": "calendar"
+    },
+    {
+      "report_date": "2026-03-16",
+      "event_date": "2026-03-16",
+      "title": "Check spheroid morphology day 1",
+      "stream": "spheroid",
+      "stream_label": "3D Models",
+      "planned_start": "2026-03-16T15:00:00+08:00",
+      "planned_end": "2026-03-16T15:20:00+08:00",
+      "status": "pending_sync",
+      "status_note": "",
+      "is_conditional": false,
+      "reason_category": "Instrument / reagent",
+      "source": "calendar"
+    },
+    {
+      "report_date": "2026-03-16",
+      "event_date": "2026-03-16",
+      "title": "Confirm animal cohort arrival and cage assignment",
+      "stream": "mouse",
+      "stream_label": "Animal Work",
+      "planned_start": "2026-03-16T17:00:00+08:00",
+      "planned_end": "2026-03-16T17:30:00+08:00",
+      "status": "completed",
+      "status_note": "Twenty five-week-old male mice were confirmed in the facility.",
+      "is_conditional": false,
+      "reason_category": "Instrument / reagent",
+      "source": "calendar"
+    }
+  ]
+}

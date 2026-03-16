@@ -1,0 +1,185 @@
+{
+  "version": 1,
+  "generated_at": "2026-03-16T19:15:27.255947+08:00",
+  "report_date": "2026-03-15",
+  "source_report": "daily_reports/2026-03-15.md",
+  "affected_dates": [
+    "2026-03-15"
+  ],
+  "report_payload": {
+    "date": "2026-03-15",
+    "execution": {
+      "completed": [
+        "Seeded the 3D spheroid plate in ten wells.",
+        "Passed the anchor culture and kept one flask in reserve."
+      ],
+      "incomplete": [
+        "Expanded the reporter culture, but it is still growing slower than the baseline after thaw."
+      ],
+      "reasons": [
+        "Reporter recovery after thaw is slower than expected, so the next expansion step still needs Tuesday confirmation."
+      ]
+    },
+    "status": {
+      "cells": [
+        "Anchor culture is stable.",
+        "Reporter culture is healthy but expanding slowly."
+      ],
+      "animals": [
+        "No new update today."
+      ],
+      "instruments": [
+        "All flow reagents are ready for Monday."
+      ]
+    },
+    "analysis": [
+      "Prepared the updated experiment notes for the next assay window."
+    ],
+    "tomorrow": [
+      "Run the 0h flow panel.",
+      "Check spheroid morphology day 1."
+    ],
+    "status_candidates": [],
+    "status_log_updated": "data/status_log.json"
+  },
+  "status_updates": [
+    {
+      "date": "2026-03-15",
+      "title_match": "Expand GFP reporter culture 5 flasks to 10 flasks",
+      "status": "partial",
+      "note": "The culture expanded to ten flasks but growth remains slower than baseline after thaw."
+    },
+    {
+      "date": "2026-03-15",
+      "title_match": "Passage anchor culture for expansion",
+      "status": "completed",
+      "note": "One flask was retained as the anchor culture."
+    },
+    {
+      "date": "2026-03-15",
+      "title_match": "Seed 3D spheroid plates",
+      "status": "completed",
+      "note": "Seeded ten wells with the same starting density."
+    }
+  ],
+  "calendar_snapshot": {
+    "calendar": "Research",
+    "events": [
+      {
+        "id": "Research|2026-03-15T13:30:00+08:00|Seed 3D spheroid plates",
+        "calendar": "Research",
+        "title": "Seed 3D spheroid plates",
+        "short_title": "Seed 3D spheroid plates",
+        "start": "2026-03-15T13:30:00+08:00",
+        "end": "2026-03-15T14:30:00+08:00",
+        "stream": "cell",
+        "display_streams": [
+          "cell"
+        ],
+        "conditional": false,
+        "status_key": "completed",
+        "status_label": "Completed",
+        "status_note": "Seeded ten wells with the same starting density."
+      },
+      {
+        "id": "Research|2026-03-15T15:30:00+08:00|Passage anchor culture for expansion",
+        "calendar": "Research",
+        "title": "Passage anchor culture for expansion",
+        "short_title": "Passage anchor culture for expansion",
+        "start": "2026-03-15T15:30:00+08:00",
+        "end": "2026-03-15T16:15:00+08:00",
+        "stream": "cell",
+        "display_streams": [
+          "cell"
+        ],
+        "conditional": false,
+        "status_key": "completed",
+        "status_label": "Completed",
+        "status_note": "One flask was retained as the anchor culture."
+      },
+      {
+        "id": "Research|2026-03-15T16:30:00+08:00|Expand GFP reporter culture 5 flasks to 10 flasks",
+        "calendar": "Research",
+        "title": "Expand GFP reporter culture 5 flasks to 10 flasks",
+        "short_title": "Expand GFP reporter culture 5 flasks to 10 flasks",
+        "start": "2026-03-15T16:30:00+08:00",
+        "end": "2026-03-15T17:45:00+08:00",
+        "stream": "cell",
+        "display_streams": [
+          "cell"
+        ],
+        "conditional": false,
+        "status_key": "partial",
+        "status_label": "Partially Done",
+        "status_note": "The culture expanded to ten flasks but growth remains slower than baseline after thaw."
+      }
+    ]
+  },
+  "plan_summary": {
+    "counts": {
+      "completed": 2,
+      "partial": 1,
+      "moved": 0,
+      "conditional": 0,
+      "unsynced": 0
+    },
+    "reason_counts": {
+      "Cell / sample state": 0,
+      "Instrument / reagent": 0,
+      "Time conflict / non-lab day": 0,
+      "Animals / materials": 0,
+      "Plan change": 0,
+      "Unspecified": 0
+    },
+    "completed_highlights": [
+      "Seed 3D spheroid plates",
+      "Passage anchor culture for expansion",
+      "Expand GFP reporter culture 5 flasks to 10 flasks"
+    ],
+    "moved_highlights": []
+  },
+  "event_records": [
+    {
+      "report_date": "2026-03-15",
+      "event_date": "2026-03-15",
+      "title": "Seed 3D spheroid plates",
+      "stream": "cell",
+      "stream_label": "Cell Expansion",
+      "planned_start": "2026-03-15T13:30:00+08:00",
+      "planned_end": "2026-03-15T14:30:00+08:00",
+      "status": "completed",
+      "status_note": "Seeded ten wells with the same starting density.",
+      "is_conditional": false,
+      "reason_category": "Cell / sample state",
+      "source": "calendar"
+    },
+    {
+      "report_date": "2026-03-15",
+      "event_date": "2026-03-15",
+      "title": "Passage anchor culture for expansion",
+      "stream": "cell",
+      "stream_label": "Cell Expansion",
+      "planned_start": "2026-03-15T15:30:00+08:00",
+      "planned_end": "2026-03-15T16:15:00+08:00",
+      "status": "completed",
+      "status_note": "One flask was retained as the anchor culture.",
+      "is_conditional": false,
+      "reason_category": "Cell / sample state",
+      "source": "calendar"
+    },
+    {
+      "report_date": "2026-03-15",
+      "event_date": "2026-03-15",
+      "title": "Expand GFP reporter culture 5 flasks to 10 flasks",
+      "stream": "cell",
+      "stream_label": "Cell Expansion",
+      "planned_start": "2026-03-15T16:30:00+08:00",
+      "planned_end": "2026-03-15T17:45:00+08:00",
+      "status": "partial",
+      "status_note": "The culture expanded to ten flasks but growth remains slower than baseline after thaw.",
+      "is_conditional": false,
+      "reason_category": "Cell / sample state",
+      "source": "calendar"
+    }
+  ]
+}

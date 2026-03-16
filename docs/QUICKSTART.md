@@ -19,8 +19,10 @@ python -m planner.cli init --mode blank
 Demo workspace:
 
 ```bash
-python -m planner.cli init --mode demo --workspace ./workspace_demo
+python -m planner.cli --workspace ./workspace_demo init --mode demo
 ```
+
+Note: `--workspace` is a global option and must appear before the subcommand.
 
 ## 3. Prepare today's report
 

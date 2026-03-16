@@ -34,9 +34,11 @@ python -m planner.cli refresh
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
-python -m planner.cli init --mode demo --workspace ./workspace_demo
+python -m planner.cli --workspace ./workspace_demo init --mode demo
 python -m planner.cli --workspace ./workspace_demo refresh
 ```
+
+注意：`--workspace` 是全局参数，必须写在子命令前面。
 
 ## 配合 AI 使用
 
