@@ -8,6 +8,40 @@
 - 默认只依赖本地文件
 - macOS 日历同步是可选集成
 
+## 最快上手
+
+如果你想让别人直接用这套模板，最简单的说法就是：
+
+1. 在 GitHub 上点 `Use this template`
+2. 用这个模板创建你自己的仓库
+3. clone 到本地
+4. 执行下面几条命令
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+python -m planner.cli init --mode blank
+python -m planner.cli prepare-report
+python -m planner.cli refresh
+```
+
+如果只是想先看匿名 demo：
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+python -m planner.cli init --mode demo --workspace ./workspace_demo
+python -m planner.cli --workspace ./workspace_demo refresh
+```
+
+## 配合 AI 使用
+
+把仓库用 Codex、Claude 或其他本地大模型打开后，可以直接说：
+
+> 先读 `README.md` 和 `docs/ARCHITECTURE.md`，再通过 `python -m planner.cli` 帮我维护这套实验规划。
+
 ## 能力范围
 
 - 短窗口主看板：前 7 天 + 今天 + 后 7 天

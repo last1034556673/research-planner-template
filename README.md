@@ -4,6 +4,46 @@ Research Planner Template is a local-first planning system for wet-lab and exper
 
 This public template is cross-platform at the core. macOS calendar sync is optional and isolated under [`integrations/macos`](integrations/macos).
 
+## Start Here
+
+If you want to use this for your own project:
+
+1. Click `Use this template` on GitHub.
+2. Create your own repository from it.
+3. Clone your copy locally.
+4. Run the setup below.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+python -m planner.cli init --mode blank
+python -m planner.cli prepare-report
+python -m planner.cli refresh
+```
+
+If you want to try the anonymized demo first:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+python -m planner.cli init --mode demo --workspace ./workspace_demo
+python -m planner.cli --workspace ./workspace_demo refresh
+```
+
+## Using It With AI Agents
+
+After cloning the repo, you can open it in Codex, Claude, or another local LLM workflow and say:
+
+> Read `README.md` and `docs/ARCHITECTURE.md`, then use `python -m planner.cli` to help me maintain this planner.
+
+Repository-scoped instructions are included for:
+
+- [`AGENTS.md`](AGENTS.md) for Codex
+- [`CLAUDE.md`](CLAUDE.md) for Claude
+- [`docs/GENERIC_AGENT.md`](docs/GENERIC_AGENT.md) for MiniMax and other local LLM workflows
+
 ## What It Does
 
 - Maintains a rolling dashboard for the past week, today, and the next week.
@@ -92,14 +132,6 @@ python -m planner.cli refresh
 python -m planner.cli summary --period month|quarter|year --target <value>
 python -m planner.cli doctor
 ```
-
-## Agent Support
-
-This repository does not require a Codex skill to work. The repo itself ships instructions for multiple model frontends:
-
-- [`AGENTS.md`](AGENTS.md) for Codex
-- [`CLAUDE.md`](CLAUDE.md) for Claude
-- [`docs/GENERIC_AGENT.md`](docs/GENERIC_AGENT.md) for MiniMax and other local LLM workflows
 
 ## Documentation
 
