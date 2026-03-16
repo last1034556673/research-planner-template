@@ -13,8 +13,40 @@ from .config import integration_settings, load_configs
 from .workspace import build_paths, ensure_workspace_dirs, repo_root
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Research planner template CLI.")
+def normalize_cli_argv(argv: list[str]) -> list[str]:
+    workspace_args: list[str] = []
+    remaining: list[str] = []
+    index = 0
+    while index < len(argv):
+        token = argv[index]
+        if token == "--workspace":
+            workspace_args.append(token)
+            if index + 1 >= len(argv):
+                raise SystemExit("Missing value after --workspace.")
+            workspace_args.append(argv[index + 1])
+            index += 2
+            continue
+        if token.startswith("--workspace="):
+            workspace_args.append(token)
+            index += 1
+            continue
+        remaining.append(token)
+        index += 1
+
+    if not workspace_args:
+        return argv
+
+    insert_at = 0
+    while insert_at < len(remaining) and remaining[insert_at].startswith("-"):
+        insert_at += 1
+    return remaining[:insert_at] + workspace_args + remaining[insert_at:]
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Research planner template CLI.",
+        epilog="Global options such as --workspace may appear before or after the subcommand.",
+    )
     parser.add_argument("--workspace", help="Workspace directory. Defaults to ./workspace", default=None)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -33,7 +65,7 @@ def parse_args() -> argparse.Namespace:
     summary_parser.add_argument("--target", help="Target period like 2026-03, 2026-Q1 or 2026.")
 
     subparsers.add_parser("doctor", help="Check workspace configuration and optional integrations.")
-    return parser.parse_args()
+    return parser.parse_args(normalize_cli_argv(list(sys.argv[1:] if argv is None else argv)))
 
 
 def copy_template(source: Path, target: Path, force: bool) -> None:
@@ -151,33 +183,183 @@ def generate_summary(paths, configs: dict[str, dict], period: str, target: str |
     return output_path
 
 
-def doctor(paths, configs: dict[str, dict]) -> None:
-    integrations = integration_settings(paths, configs)
-    report = {
-        "workspace": str(paths.root),
-        "project_name": configs["project"]["project_name"],
-        "timezone": configs["project"]["timezone"],
-        "calendar_provider": integrations["calendar_provider"],
-        "primary_calendar_name": integrations["primary_calendar_name"],
-        "plan_details_exists": paths.plan_details.exists(),
-        "status_log_exists": paths.status_log.exists(),
-        "report_template_exists": paths.report_template.exists(),
-        "events_file_exists": integrations["event_source_path"].exists(),
-        "macos_script_exists": integrations["calendar_script"].exists(),
+def template_sources() -> dict[str, Path]:
+    root = repo_root()
+    return {
+        "blank": root / "templates" / "blank_workspace",
+        "demo": root / "examples" / "wetlab_demo" / "workspace_seed",
     }
-    print(json.dumps(report, indent=2, ensure_ascii=False))
+
+
+def _doctor_line(level: str, title: str, detail: str, fix: str | None = None) -> str:
+    lines = [f"[{level}] {title}", f"      {detail}"]
+    if fix:
+        lines.append(f"      Next: {fix}")
+    return "\n".join(lines)
+
+
+def doctor(paths) -> int:
+    configs = load_configs(paths)
+    integrations = integration_settings(paths, configs)
+    sources = template_sources()
+    errors = 0
+    warnings = 0
+    lines = [
+        f"Workspace: {paths.root}",
+        f"Project name: {configs['project']['project_name']}",
+        f"Time zone: {configs['project']['timezone']}",
+        f"Calendar provider: {integrations['calendar_provider']}",
+        f"Primary calendar: {integrations['primary_calendar_name']}",
+        "",
+    ]
+
+    for label, source in sources.items():
+        if source.exists():
+            lines.append(_doctor_line("OK", f"{label.capitalize()} source is available", str(source)))
+        else:
+            errors += 1
+            lines.append(
+                _doctor_line(
+                    "ERROR",
+                    f"{label.capitalize()} source is missing",
+                    f"The repo is missing {source}. `{label}` init will fail.",
+                    "Restore the tracked template files in this repository before using init.",
+                )
+            )
+
+    if not paths.root.exists():
+        errors += 1
+        lines.append(
+            _doctor_line(
+                "ERROR",
+                "Workspace root is missing",
+                "The selected workspace has not been initialized yet.",
+                "Run `python -m planner.cli init --mode blank` or `python -m planner.cli --workspace ./workspace_demo init --mode demo`.",
+            )
+        )
+        warnings += 1
+        lines.append(
+            _doctor_line(
+                "WARN",
+                "Detailed workspace checks were skipped",
+                "The workspace does not exist yet, so file-level checks would all fail for the same reason.",
+                "Initialize the workspace first, then run `python -m planner.cli doctor` again for a full check.",
+            )
+        )
+    else:
+        lines.append(_doctor_line("OK", "Workspace root exists", str(paths.root)))
+        required_files = [
+            ("Project config", paths.project_config, "Copy the file from templates/blank_workspace/config/project.yaml or initialize a new workspace."),
+            ("Constraints config", paths.constraints_config, "Copy the file from templates/blank_workspace/config/constraints.yaml or initialize a new workspace."),
+            ("Integrations config", paths.integrations_config, "Copy the file from templates/blank_workspace/config/integrations.yaml or initialize a new workspace."),
+            ("Workstreams config", paths.workstreams_config, "Copy the file from templates/blank_workspace/config/workstreams.yaml or initialize a new workspace."),
+            ("Daily report template", paths.report_template, "Copy the file from templates/blank_workspace/daily_report_template.md or initialize a new workspace."),
+            ("Plan details", paths.plan_details, "Restore data/plan_details.json from a starter template or recreate it before refreshing the dashboard."),
+            ("Status log", paths.status_log, "Restore data/status_log.json from a starter template or recreate it before ingesting reports."),
+        ]
+        for label, path, fix in required_files:
+            if path.exists():
+                lines.append(_doctor_line("OK", label, str(path)))
+            else:
+                errors += 1
+                lines.append(_doctor_line("ERROR", label, f"Missing required file: {path}", fix))
+
+        if paths.daily_reports_dir.exists():
+            lines.append(_doctor_line("OK", "Daily reports directory", str(paths.daily_reports_dir)))
+        else:
+            warnings += 1
+            lines.append(
+                _doctor_line(
+                    "WARN",
+                    "Daily reports directory is missing",
+                    f"{paths.daily_reports_dir} does not exist yet.",
+                    "Run `python -m planner.cli prepare-report` to recreate it automatically.",
+                )
+            )
+
+        if paths.history_dir.exists():
+            lines.append(_doctor_line("OK", "History directory", str(paths.history_dir)))
+        else:
+            warnings += 1
+            lines.append(
+                _doctor_line(
+                    "WARN",
+                    "History directory is missing",
+                    f"{paths.history_dir} does not exist yet.",
+                    "Run `python -m planner.cli ingest-report --input <report>` to recreate it automatically.",
+                )
+            )
+
+        if paths.outputs_dir.exists():
+            lines.append(_doctor_line("OK", "Outputs directory", str(paths.outputs_dir)))
+        else:
+            warnings += 1
+            lines.append(
+                _doctor_line(
+                    "WARN",
+                    "Outputs directory is missing",
+                    f"{paths.outputs_dir} does not exist yet.",
+                    "Run `python -m planner.cli refresh` to recreate it automatically.",
+                )
+            )
+
+        if integrations["calendar_provider"] == "none":
+            if integrations["event_source_path"].exists():
+                lines.append(_doctor_line("OK", "File-based calendar source", str(integrations["event_source_path"])))
+            else:
+                warnings += 1
+                lines.append(
+                    _doctor_line(
+                        "WARN",
+                        "File-based calendar source is missing",
+                        f"Planner events will load as an empty list without {integrations['event_source_path']}.",
+                        "Create the JSON file with `[]` or restore data/calendar_events.json from a starter template.",
+                    )
+                )
+        else:
+            if integrations["calendar_script"].exists():
+                lines.append(_doctor_line("OK", "macOS calendar export script", str(integrations["calendar_script"])))
+            else:
+                errors += 1
+                lines.append(
+                    _doctor_line(
+                        "ERROR",
+                        "macOS calendar export script is missing",
+                        f"Expected {integrations['calendar_script']} for macOS calendar sync.",
+                        "Restore integrations/macos/export_events.swift from the repository.",
+                    )
+                )
+            warnings += 1
+            lines.append(
+                _doctor_line(
+                    "WARN",
+                    "macOS calendar access still needs user permission",
+                    "Even with the script present, EventKit export can fail if Calendar access is denied.",
+                    "Grant calendar permission to the terminal or app that runs the planner.",
+                )
+            )
+
+    summary = f"Summary: {errors} error(s), {warnings} warning(s)"
+    print("\n".join([summary, ""] + lines))
+    return 1 if errors else 0
 
 
 def main() -> int:
     args = parse_args()
     paths = build_paths(args.workspace)
-    configs = load_configs(paths) if paths.root.exists() else None
 
     if args.command == "init":
-        source = repo_root() / ("templates/blank_workspace" if args.mode == "blank" else "examples/wetlab_demo/workspace_seed")
+        source = template_sources()["blank" if args.mode == "blank" else "demo"]
+        if not source.exists():
+            raise SystemExit(f"Missing init source: {source}")
         copy_template(source, paths.root, args.force)
         print(paths.root)
         return 0
+
+    if args.command == "doctor":
+        return doctor(paths)
+
+    configs = load_configs(paths) if paths.root.exists() else None
 
     if configs is None:
         raise SystemExit(f"Workspace not found: {paths.root}. Run `python -m planner.cli init --mode blank` first.")
@@ -196,10 +378,6 @@ def main() -> int:
 
     if args.command == "summary":
         print(generate_summary(paths, configs, args.period, args.target))
-        return 0
-
-    if args.command == "doctor":
-        doctor(paths, configs)
         return 0
 
     raise SystemExit(f"Unknown command: {args.command}")

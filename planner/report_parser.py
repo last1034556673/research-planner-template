@@ -137,7 +137,11 @@ def split_inline_items(text: str) -> list[str]:
     if not value:
         return []
     parts = [item.strip(" -") for item in re.split(r"[；;]\s*", value) if item.strip()]
-    return parts or [value]
+    parts = [item for item in parts if item]
+    if parts:
+        return parts
+    fallback = value.strip(" -")
+    return [fallback] if fallback else []
 
 
 def parse_daily_report(text: str, report_date: str) -> dict[str, Any]:
