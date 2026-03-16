@@ -1,5 +1,7 @@
 # Research Planner Template
 
+English | [简体中文](./README.zh-CN.md)
+
 Research Planner Template is a local-first planning system for wet-lab and experiment-heavy research work. It combines a short-window execution dashboard, fixed-format daily reports, rolling status logs, and history summaries without requiring any cloud backend.
 
 This public template is cross-platform at the core. macOS calendar sync is optional and isolated under [`integrations/macos`](integrations/macos).
