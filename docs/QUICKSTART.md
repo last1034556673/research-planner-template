@@ -8,6 +8,13 @@ source .venv/bin/activate
 pip install -e .
 ```
 
+For local development and tests:
+
+```bash
+pip install -e '.[dev]'
+python -m pytest
+```
+
 ## 2. Create a workspace
 
 Blank workspace:

@@ -104,6 +104,13 @@ research-planner refresh
 
 The default local workspace is `./workspace`, which is ignored by git.
 
+For development or local test runs:
+
+```bash
+pip install -e '.[dev]'
+python -m pytest
+```
+
 ## Demo Workspace
 
 The anonymized demo lives in [`examples/wetlab_demo/workspace_seed/`](examples/wetlab_demo/workspace_seed/). It already contains:

@@ -86,6 +86,13 @@ research-planner doctor --json
 
 默认本地工作区是 `./workspace`，已经被 `.gitignore` 忽略，不会进入公开仓库。
 
+如果你要在本地跑开发测试：
+
+```bash
+pip install -e '.[dev]'
+python -m pytest
+```
+
 ## Demo
 
 匿名 demo 在：
