@@ -5,15 +5,16 @@ This repository is a local-first research planning template. Use the repo itself
 ## Default workflow
 
 1. Read [`README.md`](README.md) and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
-2. Work inside a local workspace, not inside the tracked demo unless the user explicitly wants the demo.
-3. Prefer the Python CLI:
+2. Read [`docs/PLANNER_WORKFLOW.md`](docs/PLANNER_WORKFLOW.md) before changing planner state or generating a local skill.
+3. Work inside a local workspace, not inside the tracked demo unless the user explicitly wants the demo.
+4. Prefer the Python CLI:
    - `python -m planner.cli init --mode blank|demo`
    - `python -m planner.cli prepare-report`
    - `python -m planner.cli ingest-report --input <path>`
    - `python -m planner.cli refresh`
    - `python -m planner.cli summary --period month|quarter|year --target <value>`
    - `python -m planner.cli doctor`
-4. Treat `workspace/` as private local state.
+5. Treat `workspace/` as private local state.
 
 ## Rules
 
@@ -27,4 +28,6 @@ This repository is a local-first research planning template. Use the repo itself
 - Core package: [`planner/`](planner/)
 - Blank starter: [`templates/blank_workspace/`](templates/blank_workspace/)
 - Demo seed: [`examples/wetlab_demo/workspace_seed/`](examples/wetlab_demo/workspace_seed/)
+- Shared workflow rules: [`docs/PLANNER_WORKFLOW.md`](docs/PLANNER_WORKFLOW.md)
+- Local Codex skill guide: [`docs/MAKE_LOCAL_CODEX_SKILL.md`](docs/MAKE_LOCAL_CODEX_SKILL.md)
 - Privacy rules: [`docs/PRIVACY_BOUNDARY.md`](docs/PRIVACY_BOUNDARY.md)

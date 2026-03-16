@@ -1,0 +1,8 @@
+interface:
+  display_name: "Research Planner"
+  short_description: "Local planner operations for a cloned research-planner-template repo."
+  default_prompt: "Use $research-planner to update the local planner workspace from a daily report and refresh outputs."
+
+policy:
+  allow_implicit_invocation: false
+

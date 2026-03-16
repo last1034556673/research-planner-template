@@ -45,6 +45,8 @@ Repository-scoped instructions are included for:
 - [`AGENTS.md`](AGENTS.md) for Codex
 - [`CLAUDE.md`](CLAUDE.md) for Claude
 - [`docs/GENERIC_AGENT.md`](docs/GENERIC_AGENT.md) for MiniMax and other local LLM workflows
+- [`docs/MAKE_LOCAL_CODEX_SKILL.md`](docs/MAKE_LOCAL_CODEX_SKILL.md) to create a local Codex skill
+- [`docs/MAKE_LOCAL_CLAUDE_CODE_SETUP.md`](docs/MAKE_LOCAL_CLAUDE_CODE_SETUP.md) to generate a local Claude Code overlay
 
 ## What It Does
 
@@ -138,6 +140,7 @@ python -m planner.cli doctor
 ## Documentation
 
 - [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
+- [`docs/PLANNER_WORKFLOW.md`](docs/PLANNER_WORKFLOW.md)
 - [`docs/MACOS_OPTIONAL.md`](docs/MACOS_OPTIONAL.md)
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - [`docs/PRIVACY_BOUNDARY.md`](docs/PRIVACY_BOUNDARY.md)

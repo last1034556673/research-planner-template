@@ -101,3 +101,9 @@ python -m planner.cli refresh
 - Codex: [`AGENTS.md`](AGENTS.md)
 - Claude: [`CLAUDE.md`](CLAUDE.md)
 - 通用大模型: [`docs/GENERIC_AGENT.md`](docs/GENERIC_AGENT.md)
+- 生成本地 Codex skill: [`docs/MAKE_LOCAL_CODEX_SKILL.md`](docs/MAKE_LOCAL_CODEX_SKILL.md)
+- 生成本地 Claude Code 配置: [`docs/MAKE_LOCAL_CLAUDE_CODE_SETUP.md`](docs/MAKE_LOCAL_CLAUDE_CODE_SETUP.md)
+
+## 工作流规则
+
+- [`docs/PLANNER_WORKFLOW.md`](docs/PLANNER_WORKFLOW.md)

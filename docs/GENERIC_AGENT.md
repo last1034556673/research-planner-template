@@ -5,10 +5,11 @@ This repo can be used with any local LLM workflow that can read files and run sh
 ## Minimal instructions to give the model
 
 1. Read `README.md` and `docs/ARCHITECTURE.md`.
-2. Treat this repo as a local-first planner.
-3. Prefer the CLI in `python -m planner.cli`.
-4. Keep user state in a local workspace, not in tracked example data.
-5. When asked to update progress:
+2. Read `docs/PLANNER_WORKFLOW.md`.
+3. Treat this repo as a local-first planner.
+4. Prefer the CLI in `python -m planner.cli`.
+5. Keep user state in a local workspace, not in tracked example data.
+6. When asked to update progress:
    - parse the daily report
    - update the status log
    - refresh the dashboard
@@ -29,3 +30,10 @@ python -m planner.cli ingest-report --input workspace/daily_reports/YYYY-MM-DD.m
 python -m planner.cli refresh
 python -m planner.cli summary --period month --target 2026-03
 ```
+
+## Optional local setup generation
+
+- Codex local skill:
+  - [`docs/MAKE_LOCAL_CODEX_SKILL.md`](./MAKE_LOCAL_CODEX_SKILL.md)
+- Claude Code local setup:
+  - [`docs/MAKE_LOCAL_CLAUDE_CODE_SETUP.md`](./MAKE_LOCAL_CLAUDE_CODE_SETUP.md)
