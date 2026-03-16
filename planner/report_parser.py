@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 from .calendar_io import load_event_records
 from .dashboard import DEFAULT_IGNORE, compact_title, parse_event, score_event_match
 from .history import DEFAULT_HISTORY_DIR, archive_report_history
+from .planner_data import normalize_calendar_events, normalize_calendar_provider, normalize_status_log
 
 
 DEFAULT_CALENDAR = "Research"
@@ -71,9 +72,6 @@ MOVE_HINTS = (
     "delay",
     "push",
     "weekend",
-    "monday",
-    "tomorrow",
-    "next",
     "顺延",
     "改到",
     "延期",
@@ -88,8 +86,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--calendar", default=DEFAULT_CALENDAR, help="Primary calendar name.")
     parser.add_argument(
         "--calendar-provider",
-        default="none",
-        choices=("none", "macos"),
+        default="file",
+        choices=("none", "file", "macos", "ics"),
         help="Calendar source provider.",
     )
     parser.add_argument("--events-file", help="JSON event source when using the file-based provider.")
@@ -222,6 +220,7 @@ def collect_events(
         events_file=events_file,
         calendar_script=calendar_script,
     )
+    raw_events = normalize_calendar_events(raw_events)
     events = [parse_event(record, tz) for record in raw_events]
     return [event for event in events if event["calendar"] == calendar and event["calendar"] not in DEFAULT_IGNORE]
 
@@ -246,10 +245,14 @@ def infer_status_candidates(payload: dict[str, Any], events: list[dict[str, Any]
         matched = best_event_match(item, events, report_date)
         if not matched:
             continue
+        if matched["start"].date() > report_date:
+            continue
         candidates.append(
             {
                 "date": matched["start"].date().isoformat(),
                 "title_match": matched["title"],
+                "task_id": matched.get("task_id"),
+                "aliases": matched.get("aliases", []),
                 "status": "completed",
                 "note": item,
             }
@@ -259,6 +262,8 @@ def infer_status_candidates(payload: dict[str, Any], events: list[dict[str, Any]
         matched = best_event_match(item, events, report_date)
         if not matched:
             continue
+        if matched["start"].date() > report_date:
+            continue
         status = "moved" if any(hint in (item + " " + reasons).lower() or hint in item or hint in reasons for hint in MOVE_HINTS) else "incomplete"
         note_parts = [item]
         if reasons:
@@ -267,6 +272,8 @@ def infer_status_candidates(payload: dict[str, Any], events: list[dict[str, Any]
             {
                 "date": matched["start"].date().isoformat(),
                 "title_match": matched["title"],
+                "task_id": matched.get("task_id"),
+                "aliases": matched.get("aliases", []),
                 "status": status,
                 "note": "；".join(part for part in note_parts if part),
             }
@@ -276,10 +283,8 @@ def infer_status_candidates(payload: dict[str, Any], events: list[dict[str, Any]
 
 def load_status_log(path: Path) -> dict[str, Any]:
     if not path.exists():
-        return {"statuses": []}
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    payload.setdefault("statuses", [])
-    return payload
+        return normalize_status_log({"statuses": []})
+    return normalize_status_log(json.loads(path.read_text(encoding="utf-8")))
 
 
 def merge_status_candidates(status_log: dict[str, Any], candidates: list[dict[str, Any]]) -> dict[str, Any]:
@@ -288,8 +293,9 @@ def merge_status_candidates(status_log: dict[str, Any], candidates: list[dict[st
         matched_index = None
         for idx, entry in enumerate(statuses):
             same_date = entry.get("date") == candidate.get("date")
+            same_task = bool(entry.get("task_id")) and entry.get("task_id") == candidate.get("task_id")
             same_title = entry.get("title_match") == candidate.get("title_match")
-            if same_date and same_title:
+            if same_date and (same_task or same_title):
                 matched_index = idx
                 break
         if matched_index is None:
@@ -318,6 +324,7 @@ def main() -> int:
     tz = ZoneInfo(args.time_zone)
     events_file = Path(args.events_file).expanduser().resolve() if args.events_file else None
     calendar_script = Path(args.calendar_script).expanduser().resolve() if args.calendar_script else None
+    provider = normalize_calendar_provider(args.calendar_provider)
     raw_text = load_text(input_path)
     report_date_text = args.date or detect_report_date(raw_text) or dt.date.today().isoformat()
     report_date = dt.date.fromisoformat(report_date_text)
@@ -328,7 +335,7 @@ def main() -> int:
         report_date=report_date,
         tz=tz,
         calendar=args.calendar,
-        provider=args.calendar_provider,
+        provider=provider,
         events_file=events_file,
         calendar_script=calendar_script,
     )
@@ -352,7 +359,7 @@ def main() -> int:
             history_dir=history_dir,
             calendar=args.calendar,
             tz=tz,
-            provider=args.calendar_provider,
+            provider=provider,
             events_file=events_file,
             calendar_script=calendar_script,
             source_report=input_path,

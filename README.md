@@ -19,9 +19,9 @@ If you want to use this for your own project:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
-python -m planner.cli init --mode blank
-python -m planner.cli prepare-report
-python -m planner.cli refresh
+research-planner init --mode blank
+research-planner prepare-report
+research-planner refresh
 ```
 
 If you want to try the anonymized demo first:
@@ -30,17 +30,17 @@ If you want to try the anonymized demo first:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
-python -m planner.cli --workspace ./workspace_demo init --mode demo
-python -m planner.cli --workspace ./workspace_demo refresh
+research-planner --workspace ./workspace_demo init --mode demo
+research-planner --workspace ./workspace_demo refresh
 ```
 
-Note: `--workspace` is a global CLI option, so it must appear before the subcommand.
+`--workspace` works both before and after the subcommand in `v1.1.0`.
 
 ## Using It With AI Agents
 
 After cloning the repo, you can open it in Codex, Claude, or another local LLM workflow and say:
 
-> Read `README.md` and `docs/ARCHITECTURE.md`, then use `python -m planner.cli` to help me maintain this planner.
+> Read `README.md` and `docs/ARCHITECTURE.md`, then use `research-planner` to help me maintain this planner.
 
 Repository-scoped instructions are included for:
 
@@ -97,9 +97,9 @@ From a fresh clone:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
-python -m planner.cli init --mode blank
-python -m planner.cli prepare-report
-python -m planner.cli refresh
+research-planner init --mode blank
+research-planner prepare-report
+research-planner refresh
 ```
 
 The default local workspace is `./workspace`, which is ignored by git.
@@ -131,12 +131,22 @@ You can inspect the prebuilt demo outputs here:
 ## CLI
 
 ```bash
-python -m planner.cli init --mode blank|demo
-python -m planner.cli prepare-report
-python -m planner.cli ingest-report --input <path>
-python -m planner.cli refresh
-python -m planner.cli summary --period month|quarter|year --target <value>
-python -m planner.cli doctor
+research-planner init --mode blank|demo
+research-planner prepare-report
+research-planner ingest-report --input <path>
+research-planner replan --input <path>
+research-planner refresh
+research-planner summary --period month|quarter|year --target <value>
+research-planner doctor
+```
+
+Additional `v1.1.0` workflow helpers:
+
+```bash
+research-planner ingest-report --input <path> --replan suggest
+research-planner replan --input <path> --apply
+research-planner doctor --json
+research-planner refresh-demo-assets --skip-screenshots
 ```
 
 ## Documentation

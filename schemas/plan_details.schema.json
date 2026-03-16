@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "plan_details.json",
+  "type": "object",
+  "required": ["schema_version", "streams", "experiments", "days"],
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 2 },
+    "streams": { "type": "array" },
+    "experiments": { "type": "array" },
+    "days": { "type": "array" }
+  },
+  "additionalProperties": true
+}

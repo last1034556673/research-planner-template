@@ -31,7 +31,7 @@ Replace:
 ## What the local Claude Code setup should do
 
 - operate this repo as a local-first planner
-- use `python -m planner.cli` as the main interface
+- use `research-planner` as the main interface
 - keep real user state in a local workspace
 - keep the fixed daily report format intact
 - respect period-specific summary density
@@ -45,4 +45,3 @@ The generated local setup may include the current user's own local repo path, bu
 ```text
 Read README.md, docs/PLANNER_WORKFLOW.md, docs/ARCHITECTURE.md, and docs/PRIVACY_BOUNDARY.md. Then create a local CLAUDE.local.md for this cloned repo by adapting templates/local_claude_setup/CLAUDE.local.md, replacing <REPO_ROOT> and <WORKSPACE_PATH>, and keeping the file local to this clone.
 ```
-

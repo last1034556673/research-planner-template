@@ -1,4 +1,4 @@
-calendar_provider: "none"
+calendar_provider: "file"
 primary_calendar_name: "Research"
 auto_open_outputs: false
 event_source_file: "data/calendar_events.json"

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "integrations.yaml",
+  "type": "object",
+  "required": ["calendar_provider", "primary_calendar_name", "auto_open_outputs", "event_source_file"],
+  "properties": {
+    "calendar_provider": { "type": "string", "enum": ["none", "file", "macos", "ics"] },
+    "primary_calendar_name": { "type": "string" },
+    "auto_open_outputs": { "type": "boolean" },
+    "event_source_file": { "type": "string" }
+  },
+  "additionalProperties": true
+}

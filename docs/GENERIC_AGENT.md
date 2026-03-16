@@ -7,7 +7,7 @@ This repo can be used with any local LLM workflow that can read files and run sh
 1. Read `README.md` and `docs/ARCHITECTURE.md`.
 2. Read `docs/PLANNER_WORKFLOW.md`.
 3. Treat this repo as a local-first planner.
-4. Prefer the CLI in `python -m planner.cli`.
+4. Prefer the CLI in `research-planner`.
 5. Keep user state in a local workspace, not in tracked example data.
 6. When asked to update progress:
    - parse the daily report
@@ -24,11 +24,12 @@ Use the template in:
 ## Suggested command flow
 
 ```bash
-python -m planner.cli init --mode blank
-python -m planner.cli prepare-report
-python -m planner.cli ingest-report --input workspace/daily_reports/YYYY-MM-DD.md
-python -m planner.cli refresh
-python -m planner.cli summary --period month --target 2026-03
+research-planner init --mode blank
+research-planner prepare-report
+research-planner ingest-report --input workspace/daily_reports/YYYY-MM-DD.md
+research-planner replan --input workspace/daily_reports/YYYY-MM-DD.md
+research-planner refresh
+research-planner summary --period month --target 2026-03
 ```
 
 ## Optional local setup generation

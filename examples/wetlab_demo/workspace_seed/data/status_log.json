@@ -4,43 +4,57 @@
       "date": "2026-03-10",
       "title_match": "Reagent inventory review",
       "status": "completed",
-      "note": "Inventory and reagent expiry dates were checked."
+      "note": "Inventory and reagent expiry dates were checked.",
+      "aliases": [],
+      "depends_on": []
     },
     {
       "date": "2026-03-12",
       "title_match": "DLS readout",
       "status": "completed",
-      "note": "Sizing run completed with the matched sample batch."
+      "note": "Sizing run completed with the matched sample batch.",
+      "aliases": [],
+      "depends_on": []
     },
     {
       "date": "2026-03-13",
       "title_match": "Format RNA summary slides",
       "status": "partial",
-      "note": "Figures are ready; the final wording still needs one more pass."
+      "note": "Figures are ready; the final wording still needs one more pass.",
+      "aliases": [],
+      "depends_on": []
     },
     {
       "date": "2026-03-15",
       "title_match": "Expand GFP reporter culture 5 flasks to 10 flasks",
       "status": "partial",
-      "note": "The culture expanded to ten flasks but growth remains slower than baseline after thaw."
+      "note": "The culture expanded to ten flasks but growth remains slower than baseline after thaw.",
+      "aliases": [],
+      "depends_on": []
     },
     {
       "date": "2026-03-15",
       "title_match": "Passage anchor culture for expansion",
       "status": "completed",
-      "note": "One flask was retained as the anchor culture."
+      "note": "One flask was retained as the anchor culture.",
+      "aliases": [],
+      "depends_on": []
     },
     {
       "date": "2026-03-15",
       "title_match": "Seed 3D spheroid plates",
       "status": "completed",
-      "note": "Seeded ten wells with the same starting density."
+      "note": "Seeded ten wells with the same starting density.",
+      "aliases": [],
+      "depends_on": []
     },
     {
       "date": "2026-03-16",
       "title_match": "Confirm animal cohort arrival and cage assignment",
       "status": "completed",
-      "note": "Twenty five-week-old male mice were confirmed in the facility."
+      "note": "Twenty five-week-old male mice were confirmed in the facility.",
+      "aliases": [],
+      "depends_on": []
     },
     {
       "date": "2026-03-17",
@@ -50,7 +64,9 @@
       "trigger_condition": "Proceed only if all ten flasks reach the target density at the Tuesday afternoon check.",
       "condition_state": "Pending confirmation",
       "blocking_reason": "The Tuesday afternoon density check has not happened yet.",
-      "next_check_time": "2026-03-17 15:00"
+      "next_check_time": "2026-03-17 15:00",
+      "aliases": [],
+      "depends_on": []
     },
     {
       "date": "2026-03-18",
@@ -60,7 +76,9 @@
       "trigger_condition": "Embed only if the spheroids are compact and stable during transfer.",
       "condition_state": "Pending confirmation",
       "blocking_reason": "Need the day-2 morphology note first.",
-      "next_check_time": "2026-03-18 12:30"
+      "next_check_time": "2026-03-18 12:30",
+      "aliases": [],
+      "depends_on": []
     },
     {
       "date": "2026-03-23",
@@ -70,7 +88,10 @@
       "trigger_condition": "Only begin if both the expanded cell stock and the animal cohort are available on the same day.",
       "condition_state": "Pending confirmation",
       "blocking_reason": "Need both expansion and animal readiness to remain aligned.",
-      "next_check_time": "2026-03-23 14:00"
+      "next_check_time": "2026-03-23 14:00",
+      "aliases": [],
+      "depends_on": []
     }
-  ]
+  ],
+  "schema_version": 2
 }

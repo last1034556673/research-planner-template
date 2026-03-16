@@ -7,7 +7,7 @@ Use this repository as a self-contained local planning system.
 1. Read [`README.md`](README.md).
 2. Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 3. Read [`docs/PLANNER_WORKFLOW.md`](docs/PLANNER_WORKFLOW.md).
-4. Operate through `python -m planner.cli`.
+4. Operate through `research-planner`.
 
 ## Expectations
 

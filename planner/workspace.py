@@ -15,6 +15,7 @@ class WorkspacePaths:
     history_daily_dir: Path
     history_summaries_dir: Path
     outputs_dir: Path
+    replan_suggestions_dir: Path
     project_config: Path
     constraints_config: Path
     integrations_config: Path
@@ -36,6 +37,7 @@ def build_paths(workspace_root: Path | str | None = None) -> WorkspacePaths:
     data_dir = root_path / "data"
     history_dir = root_path / "history"
     outputs_dir = root_path / "outputs"
+    replan_suggestions_dir = outputs_dir / "replan_suggestions"
     return WorkspacePaths(
         repo_root=repo_root(),
         root=root_path,
@@ -46,6 +48,7 @@ def build_paths(workspace_root: Path | str | None = None) -> WorkspacePaths:
         history_daily_dir=history_dir / "daily",
         history_summaries_dir=history_dir / "summaries",
         outputs_dir=outputs_dir,
+        replan_suggestions_dir=replan_suggestions_dir,
         project_config=config_dir / "project.yaml",
         constraints_config=config_dir / "constraints.yaml",
         integrations_config=config_dir / "integrations.yaml",
@@ -68,5 +71,6 @@ def ensure_workspace_dirs(paths: WorkspacePaths) -> None:
         paths.history_daily_dir,
         paths.history_summaries_dir,
         paths.outputs_dir,
+        paths.replan_suggestions_dir,
     ):
         path.mkdir(parents=True, exist_ok=True)

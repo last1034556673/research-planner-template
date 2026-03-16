@@ -7,6 +7,8 @@ from pathlib import Path
 import subprocess
 from typing import Any
 
+from .planner_data import normalize_calendar_provider
+
 
 def load_event_records(
     *,
@@ -17,7 +19,8 @@ def load_event_records(
     events_file: Path | None = None,
     calendar_script: Path | None = None,
 ) -> list[dict[str, Any]]:
-    if provider == "none":
+    provider = normalize_calendar_provider(provider)
+    if provider == "file":
         return load_event_records_from_file(start=start, end=end, events_file=events_file)
     if provider == "macos":
         return load_event_records_from_macos(
@@ -26,6 +29,8 @@ def load_event_records(
             tz_name=tz_name,
             calendar_script=calendar_script,
         )
+    if provider == "ics":
+        return load_event_records_from_ics(start=start, end=end, events_file=events_file)
     raise ValueError(f"Unsupported calendar provider: {provider}")
 
 
@@ -77,3 +82,43 @@ def load_event_records_from_macos(
     except (OSError, subprocess.CalledProcessError):
         return []
     return json.loads(result.stdout)
+
+
+def load_event_records_from_ics(
+    *,
+    start: dt.datetime,
+    end: dt.datetime,
+    events_file: Path | None,
+) -> list[dict[str, Any]]:
+    if not events_file or not events_file.exists():
+        return []
+    try:
+        from icalendar import Calendar
+    except ImportError:
+        return []
+
+    cal = Calendar.from_ical(events_file.read_bytes())
+    records: list[dict[str, Any]] = []
+    for component in cal.walk():
+        if component.name != "VEVENT":
+            continue
+        dtstart = component.decoded("DTSTART", None)
+        dtend = component.decoded("DTEND", None)
+        if dtstart is None or dtend is None:
+            continue
+        if isinstance(dtstart, dt.date) and not isinstance(dtstart, dt.datetime):
+            dtstart = dt.datetime.combine(dtstart, dt.time.min, tzinfo=start.tzinfo)
+        if isinstance(dtend, dt.date) and not isinstance(dtend, dt.datetime):
+            dtend = dt.datetime.combine(dtend, dt.time.min, tzinfo=start.tzinfo)
+        if dtend <= start or dtstart >= end:
+            continue
+        records.append(
+            {
+                "calendar": str(component.get("CATEGORIES", "Research")),
+                "title": str(component.get("SUMMARY", "Untitled Event")),
+                "start": dtstart.isoformat(),
+                "end": dtend.isoformat(),
+                "isAllDay": False,
+            }
+        )
+    return records

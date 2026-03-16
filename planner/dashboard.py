@@ -14,6 +14,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from .calendar_io import load_event_records
+from .planner_data import event_matches_status_entry, normalize_calendar_events, normalize_plan_details, normalize_status_log
 
 
 DEFAULT_OUTPUT = "future_experiment_schedule.html"
@@ -66,8 +67,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--calendar", default=DEFAULT_PRIMARY_CALENDAR, help="Primary calendar label.")
     parser.add_argument(
         "--calendar-provider",
-        default="none",
-        choices=("none", "macos"),
+        default="file",
+        choices=("none", "file", "macos", "ics"),
         help="Calendar source provider.",
     )
     parser.add_argument("--events-file", help="JSON event source when using the file-based provider.")
@@ -92,20 +93,14 @@ def set_sync_deadline(value: str) -> None:
 
 def load_plan_details(path: Path) -> dict[str, Any]:
     if not path.exists():
-        return {"streams": DEFAULT_STREAMS, "experiments": [], "days": []}
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    payload.setdefault("streams", [])
-    payload.setdefault("experiments", [])
-    payload.setdefault("days", [])
-    return payload
+        return normalize_plan_details({"streams": DEFAULT_STREAMS, "experiments": [], "days": []})
+    return normalize_plan_details(json.loads(path.read_text(encoding="utf-8")))
 
 
 def load_status_log(path: Path) -> dict[str, Any]:
     if not path.exists():
-        return {"statuses": []}
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    payload.setdefault("statuses", [])
-    return payload
+        return normalize_status_log({"statuses": []})
+    return normalize_status_log(json.loads(path.read_text(encoding="utf-8")))
 
 
 def merged_streams(plan: dict[str, Any], extra_streams: list[dict[str, Any]] | None = None) -> list[dict[str, str]]:
@@ -162,6 +157,8 @@ def parse_event(record: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:
     return {
         "id": f"{record.get('calendar', '')}|{start.isoformat()}|{title}",
         "calendar": record.get("calendar", DEFAULT_PRIMARY_CALENDAR),
+        "event_id": record.get("event_id"),
+        "task_id": record.get("task_id"),
         "title": title,
         "short_title": compact_title(title),
         "start": start,
@@ -170,6 +167,7 @@ def parse_event(record: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:
         "stream": record.get("stream") or categorize(title),
         "display_streams": list(dict.fromkeys(record.get("display_streams", []) or [record.get("stream") or categorize(title)])),
         "conditional": bool(record.get("conditional")) or is_conditional(title),
+        "aliases": list(dict.fromkeys(record.get("aliases", []) or [title])),
     }
 
 
@@ -206,16 +204,7 @@ def best_event_match(text: str, events: list[dict[str, Any]]) -> dict[str, Any] 
 
 def match_status_entry(event: dict[str, Any], entries: list[dict[str, Any]]) -> dict[str, Any] | None:
     for entry in entries:
-        entry_date = entry.get("date")
-        if entry_date and entry_date != event["start"].date().isoformat():
-            continue
-        exact = entry.get("title_match")
-        contains = entry.get("title_contains")
-        if exact and event["title"] != exact:
-            continue
-        if contains and contains not in event["title"]:
-            continue
-        if exact or contains:
+        if event_matches_status_entry(entry, event):
             return entry
     return None
 
@@ -358,6 +347,7 @@ def collect_window_events(
         events_file=events_file,
         calendar_script=calendar_script,
     )
+    raw_records = normalize_calendar_events(raw_records)
     parsed = [parse_event(record, tz) for record in raw_records]
     primary = []
     external = []
@@ -415,6 +405,12 @@ def collect_today_context(
                     "deliverable": task.get("deliverable", ""),
                     "notes": task.get("notes", []),
                     "condition": task.get("condition", ""),
+                    "status_note": matched_event.get("status_note", "") if matched_event else "",
+                    "blocking_reason": matched_event.get("blocking_reason", "") if matched_event else "",
+                    "trigger_condition": matched_event.get("trigger_condition", "") if matched_event else task.get("condition", ""),
+                    "next_check_time": matched_event.get("next_check_time", "") if matched_event else "",
+                    "date": today_key,
+                    "history_link": f"../history/summaries/{today:%Y-%m}.html#day-{today_key}",
                 }
             )
     else:
@@ -429,6 +425,12 @@ def collect_today_context(
                     "deliverable": "",
                     "notes": [event["status_note"]] if event.get("status_note") else [],
                     "condition": event.get("trigger_condition", ""),
+                    "status_note": event.get("status_note", ""),
+                    "blocking_reason": event.get("blocking_reason", ""),
+                    "trigger_condition": event.get("trigger_condition", ""),
+                    "next_check_time": event.get("next_check_time", ""),
+                    "date": today_key,
+                    "history_link": f"../history/summaries/{today:%Y-%m}.html#day-{today_key}",
                 }
             )
     return {
@@ -460,6 +462,8 @@ def collect_conditional_items(
                     "experiment": experiment.get("title", "Experiment"),
                     "title": matched["title"] if matched else step.get("title") or step.get("title_contains") or step.get("title_match") or "Conditional step",
                     "window": format_event_window(matched["start"], matched["end"]) if matched else step.get("date", "TBD"),
+                    "window_date": matched["start"].date().isoformat() if matched else step.get("date", ""),
+                    "stream_id": stream_id,
                     "stream_label": stream_map.get(stream_id, {"label": "General"})["label"],
                     "trigger_condition": matched.get("trigger_condition") if matched else step.get("decision_rule") or step.get("condition") or "Pending confirmation",
                     "condition_state": matched.get("condition_state") if matched and matched.get("condition_state") else ("Pending confirmation" if matched else "Pending confirmation"),
@@ -476,6 +480,32 @@ def collect_status_counts(events: list[dict[str, Any]]) -> dict[str, int]:
     for event in events:
         counts[event.get("status_key", "planned")] += 1
     return counts
+
+
+def render_reason_details(
+    *,
+    status_note: str = "",
+    blocking_reason: str = "",
+    trigger_condition: str = "",
+    next_check_time: str = "",
+) -> str:
+    items = []
+    if status_note:
+        items.append(f"<p><strong>Status note:</strong> {html.escape(status_note)}</p>")
+    if blocking_reason:
+        items.append(f"<p><strong>Blocking reason:</strong> {html.escape(blocking_reason)}</p>")
+    if trigger_condition:
+        items.append(f"<p><strong>Trigger condition:</strong> {html.escape(trigger_condition)}</p>")
+    if next_check_time:
+        items.append(f"<p><strong>Next check:</strong> {html.escape(next_check_time)}</p>")
+    if not items:
+        return ""
+    return (
+        "<details class=\"reason-details\">"
+        "<summary>Why this status?</summary>"
+        f"{''.join(items)}"
+        "</details>"
+    )
 
 
 def render_gantt(primary_events: list[dict[str, Any]], streams: list[dict[str, str]], days: list[dt.date]) -> str:
@@ -496,23 +526,30 @@ def render_gantt(primary_events: list[dict[str, Any]], streams: list[dict[str, s
     rows = []
     for stream in streams:
         week_cells = []
+        stream_count = 0
         for day in days:
             key = day.isoformat()
             cell_items = grouped.get(stream["id"], {}).get(key, [])
+            stream_count += len(cell_items)
             cards = []
             for event in cell_items:
                 cards.append(
-                    "<article class=\"gantt-card "
-                    f"{event['status_class']} {'gantt-conditional' if event['status_key'] == 'conditional' else ''}\">"
+                    "<article class=\"gantt-card filter-item "
+                    f"{event['status_class']} {'gantt-conditional' if event['status_key'] == 'conditional' else ''}\" "
+                    f"data-stream=\"{html.escape(stream['id'])}\" "
+                    f"data-status=\"{html.escape(event['status_key'])}\" "
+                    f"data-title=\"{html.escape((event['title'] + ' ' + event.get('status_note', '')).lower())}\" "
+                    f"data-date=\"{event['start'].date().isoformat()}\">"
                     f"<div class=\"gantt-time\">{event['start']:%H:%M}-{event['end']:%H:%M}</div>"
                     f"<div class=\"gantt-title\">{html.escape(clip_text(event['short_title'], 42))}</div>"
                     f"<div class=\"gantt-state\">{html.escape(event['status_label'])}</div>"
+                    f"{render_reason_details(status_note=event.get('status_note', ''), blocking_reason=event.get('blocking_reason', ''), trigger_condition=event.get('trigger_condition', ''), next_check_time=event.get('next_check_time', ''))}"
                     "</article>"
                 )
             cell_html = "".join(cards) if cards else "<div class=\"cell-empty\"></div>"
-            week_cells.append(f"<div class=\"calendar-cell\">{cell_html}</div>")
+            week_cells.append(f"<div class=\"calendar-cell\" data-date=\"{key}\">{cell_html}</div>")
         rows.append(
-            "<div class=\"gantt-row\">"
+            f"<div class=\"gantt-row filter-row\" data-stream=\"{html.escape(stream['id'])}\" data-count=\"{stream_count}\">"
             f"<div class=\"gantt-stream\"><strong>{html.escape(stream['label'])}</strong><small>{sum(len(v) for v in grouped.get(stream['id'], {}).values())} blocks</small></div>"
             f"<div class=\"gantt-grid\">{''.join(week_cells)}</div>"
             "</div>"
@@ -520,15 +557,15 @@ def render_gantt(primary_events: list[dict[str, Any]], streams: list[dict[str, s
 
     rows_html = "".join(rows) if rows else "<div class=\"empty-state\">No primary events in the current window.</div>"
     return (
-        "<section class=\"panel\">"
-        "<div class=\"panel-head\"><h2>Window Overview</h2><p>Past week, today, and the upcoming week in one grid.</p></div>"
-        "<div class=\"gantt-shell\">"
+        "<section class=\"panel\" data-panel=\"window-overview\">"
+        "<div class=\"panel-head\"><div><h2>Window Overview</h2><p>Past week, today, and the upcoming week in one grid.</p></div><button class=\"panel-toggle\" type=\"button\">Collapse</button></div>"
+        "<div class=\"panel-body\"><div class=\"gantt-shell\">"
         "<div class=\"gantt-row gantt-row-head\">"
         "<div class=\"gantt-stream gantt-stream-head\">Workstream</div>"
         f"<div class=\"gantt-grid gantt-grid-head\">{date_headers}</div>"
         "</div>"
         f"{rows_html}"
-        "</div>"
+        "</div></div>"
         "</section>"
     )
 
@@ -554,12 +591,18 @@ def render_today_plan(today_context: dict[str, Any], today: dt.date) -> str:
             else ""
         )
         task_cards.append(
-            "<article class=\"today-task\">"
+            "<article class=\"today-task filter-item\" "
+            f"data-stream=\"{html.escape(task['stream'])}\" "
+            f"data-status=\"{html.escape(task['status'])}\" "
+            f"data-title=\"{html.escape((task['title'] + ' ' + task.get('status_note', '') + ' ' + task.get('blocking_reason', '')).lower())}\" "
+            f"data-date=\"{task.get('date', today.isoformat())}\">"
             f"<div class=\"today-task-top\"><span class=\"task-time\">{html.escape(task['time'])}</span>{render_status_badge(task['status'])}</div>"
             f"<h3>{html.escape(task['title'])}</h3>"
             f"<p class=\"task-stream\">{html.escape(task['stream_label'])}</p>"
             f"{deliverable}{condition}"
             f"{notes_block}"
+            f"{render_reason_details(status_note=task.get('status_note', ''), blocking_reason=task.get('blocking_reason', ''), trigger_condition=task.get('trigger_condition', ''), next_check_time=task.get('next_check_time', ''))}"
+            f"<p class=\"history-link\"><a href=\"{html.escape(task.get('history_link', '#'))}\">Open matching history day</a></p>"
             "</article>"
         )
     chip_parts = []
@@ -572,14 +615,14 @@ def render_today_plan(today_context: dict[str, Any], today: dt.date) -> str:
     task_grid_html = "".join(task_cards) if task_cards else "<div class=\"empty-state\">No tasks were mapped for today.</div>"
     external_html = chips or "<span class=\"muted\">No competing calendar blocks.</span>"
     return (
-        "<section class=\"panel today-panel\">"
-        f"<div class=\"panel-head\"><h2>Today Plan</h2><p>{today:%A, %B %d, %Y}</p></div>"
-        "<div class=\"today-meta\">"
+        "<section class=\"panel today-panel\" data-panel=\"today-plan\">"
+        f"<div class=\"panel-head\"><div><h2>Today Plan</h2><p>{today:%A, %B %d, %Y}</p></div><button class=\"panel-toggle\" type=\"button\">Collapse</button></div>"
+        "<div class=\"panel-body\"><div class=\"today-meta\">"
         f"<div><span class=\"kicker\">Focus</span><strong>{html.escape(focus)}</strong></div>"
         f"<div><span class=\"kicker\">External commitments</span><div class=\"external-chip-wrap\">{external_html}</div></div>"
         "</div>"
         f"{notes_block}"
-        f"<div class=\"today-task-grid\">{task_grid_html}</div>"
+        f"<div class=\"today-task-grid\">{task_grid_html}</div></div>"
         "</section>"
     )
 
@@ -587,15 +630,19 @@ def render_today_plan(today_context: dict[str, Any], today: dt.date) -> str:
 def render_conditional_panel(items: list[dict[str, Any]]) -> str:
     if not items:
         return (
-            "<section class=\"panel\">"
-            "<div class=\"panel-head\"><h2>Conditional Task Review</h2><p>Only unresolved or confirmation-dependent tasks appear here.</p></div>"
-            "<div class=\"empty-state\">No unresolved conditional tasks in the current window.</div>"
+            "<section class=\"panel\" data-panel=\"conditional-review\">"
+            "<div class=\"panel-head\"><div><h2>Conditional Task Review</h2><p>Only unresolved or confirmation-dependent tasks appear here.</p></div><button class=\"panel-toggle\" type=\"button\">Collapse</button></div>"
+            "<div class=\"panel-body\"><div class=\"empty-state\">No unresolved conditional tasks in the current window.</div></div>"
             "</section>"
         )
     cards = []
     for item in items:
         cards.append(
-            "<article class=\"condition-card\">"
+            "<article class=\"condition-card filter-item\" "
+            f"data-stream=\"{html.escape(item.get('stream_id', 'general'))}\" "
+            f"data-status=\"conditional\" "
+            f"data-title=\"{html.escape((item['title'] + ' ' + item['blocking_reason']).lower())}\" "
+            f"data-date=\"{html.escape(item.get('window_date', ''))}\">"
             f"<div class=\"condition-meta\"><span>{html.escape(item['stream_label'])}</span><span>{html.escape(item['window'])}</span></div>"
             f"<h3>{html.escape(item['title'])}</h3>"
             f"<p class=\"condition-exp\">{html.escape(item['experiment'])}</p>"
@@ -606,9 +653,9 @@ def render_conditional_panel(items: list[dict[str, Any]]) -> str:
             "</article>"
         )
     return (
-        "<section class=\"panel\">"
-        "<div class=\"panel-head\"><h2>Conditional Task Review</h2><p>Tasks that still need a decision, result, or prerequisite check.</p></div>"
-        f"<div class=\"condition-grid\">{''.join(cards)}</div>"
+        "<section class=\"panel\" data-panel=\"conditional-review\">"
+        "<div class=\"panel-head\"><div><h2>Conditional Task Review</h2><p>Tasks that still need a decision, result, or prerequisite check.</p></div><button class=\"panel-toggle\" type=\"button\">Collapse</button></div>"
+        f"<div class=\"panel-body\"><div class=\"condition-grid\">{''.join(cards)}</div></div>"
         "</section>"
     )
 
@@ -616,9 +663,9 @@ def render_conditional_panel(items: list[dict[str, Any]]) -> str:
 def render_experiment_timelines(plan: dict[str, Any], events: list[dict[str, Any]], stream_map: dict[str, dict[str, str]]) -> str:
     if not plan.get("experiments"):
         return (
-            "<section class=\"panel\">"
-            "<div class=\"panel-head\"><h2>Experiment Timelines</h2><p>Multi-step plans appear here once you define them in plan_details.json.</p></div>"
-            "<div class=\"empty-state\">No experiment timelines defined yet.</div>"
+            "<section class=\"panel\" data-panel=\"experiment-timelines\">"
+            "<div class=\"panel-head\"><div><h2>Experiment Timelines</h2><p>Multi-step plans appear here once you define them in plan_details.json.</p></div><button class=\"panel-toggle\" type=\"button\">Collapse</button></div>"
+            "<div class=\"panel-body\"><div class=\"empty-state\">No experiment timelines defined yet.</div></div>"
             "</section>"
         )
     blocks = []
@@ -635,24 +682,32 @@ def render_experiment_timelines(plan: dict[str, Any], events: list[dict[str, Any
             decision_html = f"<p class=\"timeline-rule\"><strong>Decision rule:</strong> {html.escape(decision)}</p>" if decision else ""
             notes_block = f"<ul>{notes_html}</ul>" if notes_html else ""
             steps_html.append(
-                "<article class=\"timeline-step\">"
+                "<article class=\"timeline-step filter-item\" "
+                f"data-stream=\"{html.escape(experiment.get('stream', 'general'))}\" "
+                f"data-status=\"{html.escape(status_key)}\" "
+                f"data-title=\"{html.escape(((step.get('title') or step.get('title_match') or step.get('title_contains') or 'step') + ' ' + ' '.join(notes)).lower())}\" "
+                f"data-date=\"{html.escape(step.get('date', ''))}\">"
                 f"<div class=\"timeline-step-top\"><span>{html.escape(window)}</span>{render_status_badge(status_key)}</div>"
                 f"<h4>{html.escape(step.get('title') or step.get('title_match') or step.get('title_contains') or 'Step')}</h4>"
                 f"{decision_html}"
                 f"{notes_block}"
+                f"{render_reason_details(status_note=matched.get('status_note', '') if matched else '', blocking_reason=matched.get('blocking_reason', '') if matched else '', trigger_condition=matched.get('trigger_condition', '') if matched else decision or '', next_check_time=matched.get('next_check_time', '') if matched else '')}"
                 "</article>"
             )
         blocks.append(
-            "<article class=\"experiment-card\">"
+            "<article class=\"experiment-card filter-item\" "
+            f"data-stream=\"{html.escape(experiment.get('stream', 'general'))}\" "
+            f"data-status=\"planned\" "
+            f"data-title=\"{html.escape((experiment.get('title', '') + ' ' + experiment.get('goal', '')).lower())}\">"
             f"<div class=\"experiment-head\"><span class=\"stream-pill\">{html.escape(stream_label)}</span><h3>{html.escape(experiment.get('title', experiment.get('id', 'Experiment')))}</h3></div>"
             f"<p class=\"experiment-goal\">{html.escape(experiment.get('goal', ''))}</p>"
             f"<div class=\"timeline-list\">{''.join(steps_html)}</div>"
             "</article>"
         )
     return (
-        "<section class=\"panel\">"
-        "<div class=\"panel-head\"><h2>Experiment Timelines</h2><p>Cross-day workflows, decision points, and follow-up windows.</p></div>"
-        f"<div class=\"experiment-grid\">{''.join(blocks)}</div>"
+        "<section class=\"panel\" data-panel=\"experiment-timelines\">"
+        "<div class=\"panel-head\"><div><h2>Experiment Timelines</h2><p>Cross-day workflows, decision points, and follow-up windows.</p></div><button class=\"panel-toggle\" type=\"button\">Collapse</button></div>"
+        f"<div class=\"panel-body\"><div class=\"experiment-grid\">{''.join(blocks)}</div></div>"
         "</section>"
     )
 
@@ -670,6 +725,14 @@ def render_html(
 ) -> str:
     stream_map = {item["id"]: item for item in streams}
     counts = collect_status_counts(primary_events)
+    stream_options = "".join(
+        f"<option value=\"{html.escape(item['id'])}\">{html.escape(item['label'])}</option>"
+        for item in streams
+    )
+    status_options = "".join(
+        f"<option value=\"{html.escape(key)}\">{html.escape(meta['label'])}</option>"
+        for key, meta in STATUS_META.items()
+    )
     legend = "".join(
         f"<span class=\"legend-chip\"><i class=\"legend-dot {meta['class']}\"></i>{html.escape(meta['label'])}</span>"
         for meta in STATUS_META.values()
@@ -799,6 +862,58 @@ def render_html(
     }}
     .panel-head h2 {{ margin: 0; font-size: 30px; }}
     .panel-head p {{ margin: 0; color: var(--muted); }}
+    .panel-toggle {{
+      border: 1px solid var(--line);
+      background: #f8f1e9;
+      border-radius: 999px;
+      color: var(--ink);
+      padding: 8px 14px;
+      font: inherit;
+      cursor: pointer;
+    }}
+    .panel.collapsed .panel-body {{ display: none; }}
+    .controls-panel {{
+      margin-top: 22px;
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      align-items: end;
+    }}
+    .control {{
+      display: grid;
+      gap: 8px;
+    }}
+    .control label {{
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }}
+    .control input, .control select {{
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.92);
+      font: inherit;
+      color: var(--ink);
+    }}
+    .toggle-row {{
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+      padding-bottom: 4px;
+    }}
+    .toggle-row label {{
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      letter-spacing: normal;
+      text-transform: none;
+    }}
     .gantt-shell {{
       overflow-x: auto;
       border-top: 1px solid var(--line);
@@ -881,6 +996,7 @@ def render_html(
       border: 1px solid rgba(255,255,255,0.12);
       background: var(--general);
     }}
+    .filter-hidden {{ display: none !important; }}
     .gantt-card.status-moved,
     .legend-dot.status-moved {{ background: var(--moved); }}
     .gantt-card.status-completed,
@@ -1036,6 +1152,28 @@ def render_html(
       margin: 0;
       font-size: 18px;
     }}
+    .reason-details {{
+      margin-top: 10px;
+      border-top: 1px dashed rgba(145, 120, 103, 0.35);
+      padding-top: 10px;
+      color: var(--muted);
+    }}
+    .reason-details summary {{
+      cursor: pointer;
+      color: var(--ink);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }}
+    .reason-details p {{ margin: 8px 0; }}
+    .history-link {{
+      margin: 12px 0 0;
+      font-size: 13px;
+    }}
+    .history-link a {{
+      color: var(--mouse);
+      text-decoration: none;
+      font-weight: 600;
+    }}
     .empty-state {{
       padding: 22px;
       border-radius: 18px;
@@ -1075,11 +1213,87 @@ def render_html(
         <article class="stat-card"><span>Pending Sync</span><strong>{counts['pending_sync'] + counts['unsynced']}</strong></article>
       </div>
     </section>
+    <section class="panel controls-panel">
+      <div class="control">
+        <label for="stream-filter">Stream</label>
+        <select id="stream-filter">
+          <option value="">All streams</option>
+          {stream_options}
+        </select>
+      </div>
+      <div class="control">
+        <label for="status-filter">Status</label>
+        <select id="status-filter">
+          <option value="">All statuses</option>
+          {status_options}
+        </select>
+      </div>
+      <div class="control">
+        <label for="search-filter">Search</label>
+        <input id="search-filter" type="search" placeholder="Title, blocker, note">
+      </div>
+      <div class="control toggle-row">
+        <label><input id="hide-empty-streams" type="checkbox"> Hide empty streams</label>
+        <label><input id="today-only" type="checkbox"> Today only</label>
+      </div>
+    </section>
     {render_gantt(primary_events, streams, days)}
     {render_today_plan(today_context, today)}
     {render_conditional_panel(conditional_items)}
     {render_experiment_timelines(plan, primary_events, stream_map)}
   </div>
+  <script>
+    const todayIso = "{today.isoformat()}";
+    const streamFilter = document.getElementById("stream-filter");
+    const statusFilter = document.getElementById("status-filter");
+    const searchFilter = document.getElementById("search-filter");
+    const hideEmptyStreams = document.getElementById("hide-empty-streams");
+    const todayOnly = document.getElementById("today-only");
+
+    function elementMatches(el) {{
+      const stream = streamFilter.value.trim();
+      const status = statusFilter.value.trim();
+      const query = searchFilter.value.trim().toLowerCase();
+      const onlyToday = todayOnly.checked;
+      const elStream = (el.dataset.stream || "").trim();
+      const elStatus = (el.dataset.status || "").trim();
+      const elTitle = (el.dataset.title || "").toLowerCase();
+      const elDate = (el.dataset.date || "").trim();
+      if (stream && elStream !== stream) return false;
+      if (status && elStatus !== status) return false;
+      if (query && !elTitle.includes(query)) return false;
+      if (onlyToday && elDate && elDate !== todayIso) return false;
+      return true;
+    }}
+
+    function applyFilters() {{
+      document.querySelectorAll(".filter-item").forEach((el) => {{
+        el.classList.toggle("filter-hidden", !elementMatches(el));
+      }});
+      document.querySelectorAll(".filter-row").forEach((row) => {{
+        const rowStream = row.dataset.stream || "";
+        const streamMismatch = streamFilter.value && rowStream !== streamFilter.value;
+        const empty = hideEmptyStreams.checked && row.dataset.count === "0";
+        row.classList.toggle("filter-hidden", streamMismatch || empty);
+      }});
+      document.querySelectorAll(".calendar-cell").forEach((cell) => {{
+        const cellDate = cell.dataset.date || "";
+        cell.classList.toggle("filter-hidden", todayOnly.checked && cellDate && cellDate !== todayIso);
+      }});
+    }}
+
+    [streamFilter, statusFilter, searchFilter, hideEmptyStreams, todayOnly].forEach((el) => {{
+      el.addEventListener("input", applyFilters);
+      el.addEventListener("change", applyFilters);
+    }});
+    document.querySelectorAll(".panel-toggle").forEach((button) => {{
+      button.addEventListener("click", () => {{
+        const panel = button.closest(".panel");
+        if (panel) panel.classList.toggle("collapsed");
+      }});
+    }});
+    applyFilters();
+  </script>
 </body>
 </html>"""
 

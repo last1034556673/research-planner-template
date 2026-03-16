@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "project.yaml",
+  "type": "object",
+  "required": ["project_name", "timezone", "locale", "primary_language", "dashboard_window_days", "sync_deadline"],
+  "properties": {
+    "project_name": { "type": "string" },
+    "timezone": { "type": "string" },
+    "locale": { "type": "string" },
+    "primary_language": { "type": "string" },
+    "dashboard_window_days": { "type": "integer", "minimum": 1 },
+    "sync_deadline": { "type": "string" }
+  },
+  "additionalProperties": true
+}

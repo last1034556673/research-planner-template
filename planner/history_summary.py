@@ -293,7 +293,7 @@ def render_daily_review(records: list[dict[str, Any]], start: dt.date, end: dt.d
             )
         day_html = "<ul>" + "".join(lines) + "</ul>" if lines else "<div class=\"empty-state small\">No archived records for this day.</div>"
         cards.append(
-            "<article class=\"review-card\">"
+            f"<article class=\"review-card\" id=\"day-{cursor.isoformat()}\">"
             f"<h3>{cursor:%b %d}</h3><p class=\"review-sub\">{WEEKDAY_LABELS[cursor.weekday()]}</p>"
             f"{day_html}"
             "</article>"
@@ -323,9 +323,14 @@ def render_group_review(records: list[dict[str, Any]], buckets: list[dict[str, A
                 "</li>"
             )
         label = bucket["label"] if bucket.get("subtitle") is None else f"{bucket['label']} · {bucket['subtitle']}"
+        anchor_id = (
+            f"week-{bucket['start'].isocalendar().year}-W{bucket['start'].isocalendar().week:02d}"
+            if title.startswith("Weekly")
+            else f"month-{bucket['start']:%Y-%m}"
+        )
         bucket_html = "<ul>" + "".join(lines) + "</ul>" if lines else "<div class=\"empty-state small\">No archived records for this bucket.</div>"
         cards.append(
-            "<article class=\"review-card\">"
+            f"<article class=\"review-card\" id=\"{anchor_id}\">"
             f"<h3>{html.escape(label)}</h3>"
             f"{bucket_html}"
             "</article>"

@@ -8,12 +8,13 @@ This repository is a local-first research planning template. Use the repo itself
 2. Read [`docs/PLANNER_WORKFLOW.md`](docs/PLANNER_WORKFLOW.md) before changing planner state or generating a local skill.
 3. Work inside a local workspace, not inside the tracked demo unless the user explicitly wants the demo.
 4. Prefer the Python CLI:
-   - `python -m planner.cli init --mode blank|demo`
-   - `python -m planner.cli prepare-report`
-   - `python -m planner.cli ingest-report --input <path>`
-   - `python -m planner.cli refresh`
-   - `python -m planner.cli summary --period month|quarter|year --target <value>`
-   - `python -m planner.cli doctor`
+   - `research-planner init --mode blank|demo`
+   - `research-planner prepare-report`
+   - `research-planner ingest-report --input <path>`
+   - `research-planner replan --input <path>`
+   - `research-planner refresh`
+   - `research-planner summary --period month|quarter|year --target <value>`
+   - `research-planner doctor`
 5. Treat `workspace/` as private local state.
 
 ## Rules

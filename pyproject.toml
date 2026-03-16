@@ -4,11 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "research-planner-template"
-version = "0.1.0"
+version = "1.1.0"
 description = "Template repository for daily research planning, dashboards, and history summaries."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["PyYAML>=6.0"]
+
+[project.optional-dependencies]
+ics = ["icalendar>=5.0"]
+
+[project.scripts]
+research-planner = "planner.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["planner*"]

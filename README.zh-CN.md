@@ -23,9 +23,9 @@
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
-python -m planner.cli init --mode blank
-python -m planner.cli prepare-report
-python -m planner.cli refresh
+research-planner init --mode blank
+research-planner prepare-report
+research-planner refresh
 ```
 
 如果只是想先看匿名 demo：
@@ -34,17 +34,17 @@ python -m planner.cli refresh
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
-python -m planner.cli --workspace ./workspace_demo init --mode demo
-python -m planner.cli --workspace ./workspace_demo refresh
+research-planner --workspace ./workspace_demo init --mode demo
+research-planner --workspace ./workspace_demo refresh
 ```
 
-注意：`--workspace` 是全局参数，必须写在子命令前面。
+`v1.1.0` 里，`--workspace` 写在子命令前后都可以。
 
 ## 配合 AI 使用
 
 把仓库用 Codex、Claude 或其他本地大模型打开后，可以直接说：
 
-> 先读 `README.md` 和 `docs/ARCHITECTURE.md`，再通过 `python -m planner.cli` 帮我维护这套实验规划。
+> 先读 `README.md` 和 `docs/ARCHITECTURE.md`，再通过 `research-planner` 帮我维护这套实验规划。
 
 ## 能力范围
 
@@ -71,9 +71,17 @@ python -m planner.cli --workspace ./workspace_demo refresh
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
-python -m planner.cli init --mode blank
-python -m planner.cli prepare-report
-python -m planner.cli refresh
+research-planner init --mode blank
+research-planner prepare-report
+research-planner refresh
+```
+
+常用命令：
+
+```bash
+research-planner ingest-report --input workspace/daily_reports/YYYY-MM-DD.md
+research-planner replan --input workspace/daily_reports/YYYY-MM-DD.md
+research-planner doctor --json
 ```
 
 默认本地工作区是 `./workspace`，已经被 `.gitignore` 忽略，不会进入公开仓库。

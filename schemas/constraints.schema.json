@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "constraints.yaml",
+  "type": "object",
+  "required": ["meetings", "blocked_days", "blocked_windows", "weekend_rules", "workday_start", "workday_end"],
+  "properties": {
+    "meetings": { "type": "array" },
+    "blocked_days": { "type": "array", "items": { "type": "string" } },
+    "blocked_windows": { "type": "array" },
+    "weekend_rules": { "type": "object" },
+    "workday_start": { "type": "string" },
+    "workday_end": { "type": "string" }
+  },
+  "additionalProperties": true
+}

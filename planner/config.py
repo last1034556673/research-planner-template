@@ -5,6 +5,7 @@ from typing import Any
 
 import yaml
 
+from .planner_data import normalize_calendar_provider
 from .workspace import WorkspacePaths
 
 
@@ -22,10 +23,12 @@ DEFAULT_CONSTRAINTS = {
     "blocked_days": [],
     "blocked_windows": [],
     "weekend_rules": {},
+    "workday_start": "08:00",
+    "workday_end": "18:00",
 }
 
 DEFAULT_INTEGRATIONS = {
-    "calendar_provider": "none",
+    "calendar_provider": "file",
     "primary_calendar_name": "Research",
     "auto_open_outputs": False,
     "event_source_file": "data/calendar_events.json",
@@ -80,6 +83,7 @@ def resolve_workspace_path(paths: WorkspacePaths, configured_path: str | None, f
 
 def integration_settings(paths: WorkspacePaths, configs: dict[str, Any]) -> dict[str, Any]:
     integrations = dict(configs["integrations"])
+    integrations["calendar_provider"] = normalize_calendar_provider(integrations.get("calendar_provider"))
     integrations["event_source_path"] = resolve_workspace_path(
         paths,
         integrations.get("event_source_file"),

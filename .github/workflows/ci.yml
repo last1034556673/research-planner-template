@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Blank workspace smoke test
+        run: |
+          python -m planner.cli --workspace ./workspace_blank init --mode blank --no-input
+          python -m planner.cli --workspace ./workspace_blank doctor --json
+          python -m planner.cli --workspace ./workspace_blank prepare-report
+          python -m planner.cli --workspace ./workspace_blank refresh
+          python -m planner.cli --workspace ./workspace_blank summary --period month --target 2026-03
+
+      - name: Demo workspace smoke test
+        run: |
+          python -m planner.cli --workspace ./workspace_demo init --mode demo --no-input
+          python -m planner.cli --workspace ./workspace_demo doctor --json
+          python -m planner.cli --workspace ./workspace_demo refresh
+          python -m planner.cli --workspace ./workspace_demo replan --input ./workspace_demo/daily_reports/2026-03-15.md

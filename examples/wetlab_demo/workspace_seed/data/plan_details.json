@@ -1,14 +1,41 @@
 {
   "streams": [
-    {"id": "rna", "label": "Analysis / Slides"},
-    {"id": "cell", "label": "Cell Expansion"},
-    {"id": "spheroid", "label": "3D Models"},
-    {"id": "flow", "label": "Assays / Flow"},
-    {"id": "material", "label": "Material Characterization"},
-    {"id": "robot", "label": "Motion Tests"},
-    {"id": "mouse", "label": "Animal Work"},
-    {"id": "prep", "label": "Preparation / Follow-up"},
-    {"id": "general", "label": "General"}
+    {
+      "id": "rna",
+      "label": "Analysis / Slides"
+    },
+    {
+      "id": "cell",
+      "label": "Cell Expansion"
+    },
+    {
+      "id": "spheroid",
+      "label": "3D Models"
+    },
+    {
+      "id": "flow",
+      "label": "Assays / Flow"
+    },
+    {
+      "id": "material",
+      "label": "Material Characterization"
+    },
+    {
+      "id": "robot",
+      "label": "Motion Tests"
+    },
+    {
+      "id": "mouse",
+      "label": "Animal Work"
+    },
+    {
+      "id": "prep",
+      "label": "Preparation / Follow-up"
+    },
+    {
+      "id": "general",
+      "label": "General"
+    }
   ],
   "experiments": [
     {
@@ -23,7 +50,14 @@
           "notes": [
             "Keep one flask as the anchor culture.",
             "Estimate the next passage in about three days."
-          ]
+          ],
+          "aliases": [
+            "Passage anchor culture for expansion"
+          ],
+          "task_id": "task-7b1cd17a9d",
+          "depends_on": [],
+          "hard_timepoint": false,
+          "replan_policy": "auto"
         },
         {
           "date": "2026-03-15",
@@ -31,7 +65,16 @@
           "notes": [
             "Record total cell count and average per flask.",
             "Mark growth as slower than baseline if the post-thaw increase is modest."
-          ]
+          ],
+          "aliases": [
+            "Expand GFP reporter culture 5 flasks to 10 flasks"
+          ],
+          "task_id": "task-5902e4d4b6",
+          "depends_on": [
+            "task-7b1cd17a9d"
+          ],
+          "hard_timepoint": false,
+          "replan_policy": "auto"
         },
         {
           "date": "2026-03-17",
@@ -39,7 +82,16 @@
           "decision_rule": "Proceed only if all ten flasks reach the target density at the Tuesday afternoon check.",
           "notes": [
             "If density is still low, keep the conditional card active and push the downstream window."
-          ]
+          ],
+          "aliases": [
+            "If reporter culture is ready: expand to 20 flasks and seed spheroids"
+          ],
+          "task_id": "task-976cfa0215",
+          "depends_on": [
+            "task-5902e4d4b6"
+          ],
+          "hard_timepoint": false,
+          "replan_policy": "conditional"
         }
       ]
     },
@@ -55,14 +107,30 @@
           "notes": [
             "Use ten wells with the same starting density.",
             "Capture the seed count in the lab notebook."
-          ]
+          ],
+          "aliases": [
+            "Seed 3D spheroid plates"
+          ],
+          "task_id": "task-e114778deb",
+          "depends_on": [],
+          "hard_timepoint": false,
+          "replan_policy": "auto"
         },
         {
           "date": "2026-03-16",
           "title_match": "Check spheroid morphology day 1",
           "notes": [
             "Record whether aggregation is visible in all wells."
-          ]
+          ],
+          "aliases": [
+            "Check spheroid morphology day 1"
+          ],
+          "task_id": "task-46a407e005",
+          "depends_on": [
+            "task-e114778deb"
+          ],
+          "hard_timepoint": false,
+          "replan_policy": "auto"
         },
         {
           "date": "2026-03-18",
@@ -70,7 +138,16 @@
           "decision_rule": "Embed only if the spheroids are compact and easy to transfer without breaking.",
           "notes": [
             "If the morphology is weak, keep the plate in suspension and re-check the next day."
-          ]
+          ],
+          "aliases": [
+            "If spheroids are compact: embed in matrix"
+          ],
+          "task_id": "task-d6d42fa6f8",
+          "depends_on": [
+            "task-46a407e005"
+          ],
+          "hard_timepoint": false,
+          "replan_policy": "conditional"
         }
       ]
     },
@@ -85,21 +162,46 @@
           "title_match": "Run 0h surface labeling flow panel",
           "notes": [
             "Run control, dye-only, and metabolically labeled groups."
-          ]
+          ],
+          "aliases": [
+            "Run 0h surface labeling flow panel"
+          ],
+          "task_id": "task-719467afe0",
+          "depends_on": [],
+          "hard_timepoint": true,
+          "replan_policy": "manual"
         },
         {
           "date": "2026-03-17",
           "title_match": "Run 24h flow timepoint",
           "notes": [
             "Keep the same gating strategy for comparability."
-          ]
+          ],
+          "aliases": [
+            "Run 24h flow timepoint"
+          ],
+          "task_id": "task-bda56d0d97",
+          "depends_on": [
+            "task-719467afe0"
+          ],
+          "hard_timepoint": true,
+          "replan_policy": "manual"
         },
         {
           "date": "2026-03-20",
           "title_match": "Run 48h flow timepoint",
           "notes": [
             "Archive raw FCS files and note any drift."
-          ]
+          ],
+          "aliases": [
+            "Run 48h flow timepoint"
+          ],
+          "task_id": "task-89455a1061",
+          "depends_on": [
+            "task-bda56d0d97"
+          ],
+          "hard_timepoint": true,
+          "replan_policy": "manual"
         }
       ]
     },
@@ -114,14 +216,30 @@
           "title_match": "DLS readout",
           "notes": [
             "Capture count rate, diameter distribution, and batch identifier."
-          ]
+          ],
+          "aliases": [
+            "DLS readout"
+          ],
+          "task_id": "task-1236ae834d",
+          "depends_on": [],
+          "hard_timepoint": false,
+          "replan_policy": "auto"
         },
         {
           "date": "2026-03-19",
           "title_match": "Zeta potential measurement",
           "notes": [
             "Use the matched buffer condition from the DLS batch."
-          ]
+          ],
+          "aliases": [
+            "Zeta potential measurement"
+          ],
+          "task_id": "task-2746567773",
+          "depends_on": [
+            "task-1236ae834d"
+          ],
+          "hard_timepoint": false,
+          "replan_policy": "auto"
         }
       ]
     },
@@ -136,7 +254,14 @@
           "title_match": "Confirm animal cohort arrival and cage assignment",
           "notes": [
             "Record cohort size, sex, and housing note."
-          ]
+          ],
+          "aliases": [
+            "Confirm animal cohort arrival and cage assignment"
+          ],
+          "task_id": "task-40591f71de",
+          "depends_on": [],
+          "hard_timepoint": false,
+          "replan_policy": "auto"
         },
         {
           "date": "2026-03-23",
@@ -144,7 +269,16 @@
           "decision_rule": "Only begin if both the expanded cell stock and the animal cohort are available on the same day.",
           "notes": [
             "Use this as a gated readiness window rather than a hard promise."
-          ]
+          ],
+          "aliases": [
+            "If cells and mice are ready: cohort start"
+          ],
+          "task_id": "task-6d3a33710e",
+          "depends_on": [
+            "task-40591f71de"
+          ],
+          "hard_timepoint": false,
+          "replan_policy": "conditional"
         }
       ]
     }
@@ -164,17 +298,38 @@
           "deliverable": "Ten seeded wells with a consistent cell count.",
           "notes": [
             "Record the target density per well in the notebook."
-          ]
+          ],
+          "aliases": [
+            "Seed 3D spheroid plates"
+          ],
+          "task_id": "task-e114778deb",
+          "depends_on": [],
+          "hard_timepoint": false,
+          "replan_policy": "auto"
         },
         {
           "stream": "cell",
           "title_match": "Passage anchor culture for expansion",
-          "deliverable": "One anchor flask retained for the next passage window."
+          "deliverable": "One anchor flask retained for the next passage window.",
+          "aliases": [
+            "Passage anchor culture for expansion"
+          ],
+          "task_id": "task-7b1cd17a9d",
+          "depends_on": [],
+          "hard_timepoint": false,
+          "replan_policy": "auto"
         },
         {
           "stream": "cell",
           "title_match": "Expand GFP reporter culture 5 flasks to 10 flasks",
-          "deliverable": "Reporter culture expansion with cell-count note."
+          "deliverable": "Reporter culture expansion with cell-count note.",
+          "aliases": [
+            "Expand GFP reporter culture 5 flasks to 10 flasks"
+          ],
+          "task_id": "task-5902e4d4b6",
+          "depends_on": [],
+          "hard_timepoint": false,
+          "replan_policy": "auto"
         }
       ]
     },
@@ -188,27 +343,62 @@
         {
           "stream": "flow",
           "title_match": "Run 0h surface labeling flow panel",
-          "deliverable": "0h fluorescence readout for the labeling panel."
+          "deliverable": "0h fluorescence readout for the labeling panel.",
+          "aliases": [
+            "Run 0h surface labeling flow panel"
+          ],
+          "task_id": "task-719467afe0",
+          "depends_on": [],
+          "hard_timepoint": true,
+          "replan_policy": "manual"
         },
         {
           "stream": "flow",
           "title_match": "Start uptake assay with dye particle panel",
-          "deliverable": "Uptake assay started for the next time point."
+          "deliverable": "Uptake assay started for the next time point.",
+          "aliases": [
+            "Start uptake assay with dye particle panel"
+          ],
+          "task_id": "task-a4349d7984",
+          "depends_on": [],
+          "hard_timepoint": false,
+          "replan_policy": "auto"
         },
         {
           "stream": "rna",
           "title_match": "Update RNA slide deck and figures",
-          "deliverable": "Near-final slide deck for the weekly review."
+          "deliverable": "Near-final slide deck for the weekly review.",
+          "aliases": [
+            "Update RNA slide deck and figures"
+          ],
+          "task_id": "task-4bf7dda3bf",
+          "depends_on": [],
+          "hard_timepoint": false,
+          "replan_policy": "auto"
         },
         {
           "stream": "spheroid",
           "title_match": "Check spheroid morphology day 1",
-          "deliverable": "Morphology notes for all ten wells."
+          "deliverable": "Morphology notes for all ten wells.",
+          "aliases": [
+            "Check spheroid morphology day 1"
+          ],
+          "task_id": "task-46a407e005",
+          "depends_on": [],
+          "hard_timepoint": false,
+          "replan_policy": "auto"
         },
         {
           "stream": "mouse",
           "title_match": "Confirm animal cohort arrival and cage assignment",
-          "deliverable": "Cohort note added to the tracker."
+          "deliverable": "Cohort note added to the tracker.",
+          "aliases": [
+            "Confirm animal cohort arrival and cage assignment"
+          ],
+          "task_id": "task-40591f71de",
+          "depends_on": [],
+          "hard_timepoint": false,
+          "replan_policy": "auto"
         }
       ]
     },
@@ -222,13 +412,27 @@
         {
           "stream": "flow",
           "title_match": "Run 24h flow timepoint",
-          "deliverable": "24h fluorescence readout."
+          "deliverable": "24h fluorescence readout.",
+          "aliases": [
+            "Run 24h flow timepoint"
+          ],
+          "task_id": "task-bda56d0d97",
+          "depends_on": [],
+          "hard_timepoint": true,
+          "replan_policy": "manual"
         },
         {
           "stream": "cell",
           "title_match": "If reporter culture is ready: expand to 20 flasks and seed spheroids",
           "deliverable": "Either expand immediately or reschedule with a reason.",
-          "condition": "Proceed only if the reporter culture reaches the target density in all ten flasks."
+          "condition": "Proceed only if the reporter culture reaches the target density in all ten flasks.",
+          "aliases": [
+            "If reporter culture is ready: expand to 20 flasks and seed spheroids"
+          ],
+          "task_id": "task-976cfa0215",
+          "depends_on": [],
+          "hard_timepoint": false,
+          "replan_policy": "conditional"
         }
       ]
     },
@@ -239,13 +443,27 @@
         {
           "stream": "spheroid",
           "title_match": "Check spheroid morphology day 2",
-          "deliverable": "Compactness decision for the matrix step."
+          "deliverable": "Compactness decision for the matrix step.",
+          "aliases": [
+            "Check spheroid morphology day 2"
+          ],
+          "task_id": "task-623f96995f",
+          "depends_on": [],
+          "hard_timepoint": false,
+          "replan_policy": "auto"
         },
         {
           "stream": "spheroid",
           "title_match": "If spheroids are compact: embed in matrix",
           "deliverable": "Matrix-embedded 3D model or a documented delay.",
-          "condition": "Embed only if the spheroids are compact and easy to transfer."
+          "condition": "Embed only if the spheroids are compact and easy to transfer.",
+          "aliases": [
+            "If spheroids are compact: embed in matrix"
+          ],
+          "task_id": "task-d6d42fa6f8",
+          "depends_on": [],
+          "hard_timepoint": false,
+          "replan_policy": "conditional"
         }
       ]
     },
@@ -256,7 +474,14 @@
         {
           "stream": "material",
           "title_match": "Zeta potential measurement",
-          "deliverable": "Zeta potential readout from the matched batch."
+          "deliverable": "Zeta potential readout from the matched batch.",
+          "aliases": [
+            "Zeta potential measurement"
+          ],
+          "task_id": "task-2746567773",
+          "depends_on": [],
+          "hard_timepoint": false,
+          "replan_policy": "auto"
         }
       ]
     },
@@ -268,9 +493,17 @@
           "stream": "mouse",
           "title_match": "If cells and mice are ready: cohort start",
           "deliverable": "Same-day confirmation of cell and animal readiness.",
-          "condition": "Only begin if both the expanded cell stock and the animal cohort are available."
+          "condition": "Only begin if both the expanded cell stock and the animal cohort are available.",
+          "aliases": [
+            "If cells and mice are ready: cohort start"
+          ],
+          "task_id": "task-6d3a33710e",
+          "depends_on": [],
+          "hard_timepoint": false,
+          "replan_policy": "conditional"
         }
       ]
     }
-  ]
+  ],
+  "schema_version": 2
 }

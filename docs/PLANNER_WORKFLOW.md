@@ -49,14 +49,15 @@ Free-form text is fallback only.
 ## Default update loop
 
 1. Prepare today's report:
-   - `python -m planner.cli prepare-report`
+   - `research-planner prepare-report`
 2. Fill the report.
 3. Ingest it:
-   - `python -m planner.cli ingest-report --input <report>`
+   - `research-planner ingest-report --input <report>`
+   - optional: `research-planner ingest-report --input <report> --replan suggest`
 4. Refresh the dashboard:
-   - `python -m planner.cli refresh`
+   - `research-planner refresh`
 5. Generate summaries only when requested:
-   - `python -m planner.cli summary --period month|quarter|year --target <value>`
+   - `research-planner summary --period month|quarter|year --target <value>`
 
 ## Status rules
 
@@ -113,4 +114,3 @@ Use period-specific density:
 - Do not commit generated local history, dashboards, or daily reports.
 - Do not place personal names, private calendar names, real experiment identifiers, or another user's home-directory path into tracked files.
 - If generating a local skill or local agent config, keep private paths in the local generated copy only, never in the public repo template.
-

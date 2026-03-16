@@ -13,21 +13,21 @@ pip install -e .
 Blank workspace:
 
 ```bash
-python -m planner.cli init --mode blank
+research-planner init --mode blank
 ```
 
 Demo workspace:
 
 ```bash
-python -m planner.cli --workspace ./workspace_demo init --mode demo
+research-planner --workspace ./workspace_demo init --mode demo
 ```
 
-Note: `--workspace` is a global option and must appear before the subcommand.
+`--workspace` works both before and after the subcommand.
 
 ## 3. Prepare today's report
 
 ```bash
-python -m planner.cli prepare-report
+research-planner prepare-report
 ```
 
 This creates `workspace/daily_reports/YYYY-MM-DD.md` from the fixed template.
@@ -35,7 +35,7 @@ This creates `workspace/daily_reports/YYYY-MM-DD.md` from the fixed template.
 ## 4. Refresh the dashboard
 
 ```bash
-python -m planner.cli refresh
+research-planner refresh
 ```
 
 Output:
@@ -45,7 +45,8 @@ Output:
 ## 5. Ingest a completed report
 
 ```bash
-python -m planner.cli ingest-report --input workspace/daily_reports/YYYY-MM-DD.md
+research-planner ingest-report --input workspace/daily_reports/YYYY-MM-DD.md
+research-planner replan --input workspace/daily_reports/YYYY-MM-DD.md
 ```
 
 This updates:
@@ -58,13 +59,14 @@ This updates:
 ## 6. Generate summaries
 
 ```bash
-python -m planner.cli summary --period month --target 2026-03
-python -m planner.cli summary --period quarter --target 2026-Q1
-python -m planner.cli summary --period year --target 2026
+research-planner summary --period month --target 2026-03
+research-planner summary --period quarter --target 2026-Q1
+research-planner summary --period year --target 2026
 ```
 
 ## 7. Verify setup
 
 ```bash
-python -m planner.cli doctor
+research-planner doctor
+research-planner doctor --json
 ```

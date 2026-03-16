@@ -21,7 +21,7 @@ Recommended local target:
 ## What the generated local skill should do
 
 - operate a local workspace for this repo
-- prefer `python -m planner.cli`
+- prefer `research-planner`
 - preserve the fixed daily report contract
 - update status and refresh the dashboard
 - generate long-period summaries only when requested
@@ -54,4 +54,3 @@ Keep the generated copy local. Do not commit the filled-in copy back to the publ
 ```text
 Read README.md, docs/PLANNER_WORKFLOW.md, docs/ARCHITECTURE.md, and docs/PRIVACY_BOUNDARY.md. Then create a local Codex skill named research-planner for this cloned repo by copying templates/local_codex_skill/, replacing <REPO_ROOT> and <WORKSPACE_PATH>, and keeping the result outside the tracked repository.
 ```
-

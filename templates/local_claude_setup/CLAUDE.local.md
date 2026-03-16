@@ -22,7 +22,7 @@ Keep the filled-in copy local. Do not commit it back to the public repository.
 
 - Treat this repo as a local-first planner.
 - Keep real state in `<WORKSPACE_PATH>` or `<REPO_ROOT>/workspace`.
-- Prefer `python -m planner.cli`.
+- Prefer `research-planner`.
 - Preserve the fixed daily report contract.
 - Refresh summaries only when requested.
 - Keep the main dashboard short-window.
@@ -34,9 +34,8 @@ Keep the filled-in copy local. Do not commit it back to the public repository.
 ## Useful commands
 
 ```bash
-python -m planner.cli --workspace "<WORKSPACE_PATH>" prepare-report
-python -m planner.cli --workspace "<WORKSPACE_PATH>" ingest-report --input "<REPORT_PATH>"
-python -m planner.cli --workspace "<WORKSPACE_PATH>" refresh
-python -m planner.cli --workspace "<WORKSPACE_PATH>" summary --period month --target 2026-03
+research-planner --workspace "<WORKSPACE_PATH>" prepare-report
+research-planner --workspace "<WORKSPACE_PATH>" ingest-report --input "<REPORT_PATH>"
+research-planner --workspace "<WORKSPACE_PATH>" refresh
+research-planner --workspace "<WORKSPACE_PATH>" summary --period month --target 2026-03
 ```
-
