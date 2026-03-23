@@ -6,452 +6,453 @@
   <title>Anonymized Wet-Lab Demo Planner</title>
   <style>
     :root {
-      --bg: #f4efe8;
-      --paper: #fffdfa;
-      --ink: #2d241f;
-      --muted: #766960;
-      --line: #e8ddd0;
-      --shadow: 0 18px 45px rgba(86, 58, 37, 0.08);
-      --radius: 28px;
-      --rna: #c95e49;
-      --cell: #1b8a83;
-      --spheroid: #6469d8;
-      --flow: #ee934d;
-      --material: #2d6fab;
-      --robot: #2e9b7d;
-      --mouse: #9c4e44;
-      --prep: #967321;
-      --general: #67727e;
-      --done: #17664f;
-      --partial: #845b19;
-      --moved: #8a6d61;
-      --incomplete: #9e3f39;
-      --pending: #7a5d2a;
-      --unsynced: #8a4c4c;
-      --conditional: #5a55b8;
-      --planned: #5f6d7a;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background:
-        radial-gradient(circle at top left, rgba(242, 186, 138, 0.26), transparent 32%),
-        linear-gradient(180deg, #f8f4ee 0%, var(--bg) 100%);
-      color: var(--ink);
-      font-family: "Avenir Next", "Segoe UI", sans-serif;
-    }
-    .shell { max-width: 1580px; margin: 0 auto; padding: 28px; }
-    .hero {
-      background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(255,247,239,0.92));
-      border: 1px solid rgba(146, 106, 77, 0.12);
-      box-shadow: var(--shadow);
-      border-radius: 34px;
-      padding: 28px 30px;
-      display: grid;
-      gap: 22px;
-    }
-    .hero h1 { margin: 0; font-size: 44px; line-height: 1.05; }
-    .hero p { margin: 0; color: var(--muted); }
-    .hero-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 20px;
-      align-items: flex-start;
-      flex-wrap: wrap;
-    }
-    .hero-stats {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(150px, 1fr));
-      gap: 14px;
-      width: 100%;
-    }
-    .stat-card {
-      background: var(--paper);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 16px 18px;
-    }
-    .stat-card span {
-      display: block;
-      font-size: 12px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-    .stat-card strong { font-size: 28px; }
-    .legend-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px 12px;
-      align-items: center;
-    }
-    .legend-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255,255,255,0.72);
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 8px 12px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .legend-dot {
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-    }
-    .panel {
-      margin-top: 22px;
-      background: rgba(255,253,250,0.95);
-      border: 1px solid rgba(146, 106, 77, 0.12);
-      box-shadow: var(--shadow);
-      border-radius: var(--radius);
-      padding: 24px;
-    }
-    .panel-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: end;
-      flex-wrap: wrap;
-      margin-bottom: 18px;
-    }
-    .panel-head h2 { margin: 0; font-size: 30px; }
-    .panel-head p { margin: 0; color: var(--muted); }
-    .panel-toggle {
-      border: 1px solid var(--line);
-      background: #f8f1e9;
-      border-radius: 999px;
-      color: var(--ink);
-      padding: 8px 14px;
-      font: inherit;
-      cursor: pointer;
-    }
-    .panel.collapsed .panel-body { display: none; }
-    .controls-panel {
-      margin-top: 22px;
-      display: grid;
-      gap: 14px;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      align-items: end;
-    }
-    .control {
-      display: grid;
-      gap: 8px;
-    }
-    .control label {
-      color: var(--muted);
-      font-size: 12px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-    .control input, .control select {
-      width: 100%;
-      padding: 11px 12px;
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.92);
-      font: inherit;
-      color: var(--ink);
-    }
-    .toggle-row {
-      display: flex;
-      gap: 14px;
-      flex-wrap: wrap;
-      align-items: center;
-      padding-bottom: 4px;
-    }
-    .toggle-row label {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 14px;
-      letter-spacing: normal;
-      text-transform: none;
-    }
-    .gantt-shell {
-      overflow-x: auto;
-      border-top: 1px solid var(--line);
-      padding-top: 14px;
-    }
-    .gantt-row {
-      display: grid;
-      grid-template-columns: 280px minmax(900px, 1fr);
-      gap: 14px;
-      align-items: start;
-      margin-bottom: 12px;
-    }
-    .gantt-row-head {
-      position: sticky;
-      top: 0;
-      background: rgba(255, 253, 250, 0.92);
-      z-index: 2;
-      padding-bottom: 8px;
-    }
-    .gantt-stream {
-      padding: 14px 12px;
-      border-radius: 18px;
-      background: rgba(250, 243, 235, 0.95);
-      border: 1px solid var(--line);
-      min-height: 100%;
-    }
-    .gantt-stream strong {
-      display: block;
-      font-size: 15px;
-      margin-bottom: 6px;
-    }
-    .gantt-stream small {
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .gantt-stream-head {
-      font-size: 13px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-    .gantt-grid {
-      display: grid;
-      grid-template-columns: repeat(15, minmax(120px, 1fr));
-      gap: 10px;
-    }
-    .calendar-cell {
-      min-height: 112px;
-      border-radius: 18px;
-      padding: 10px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(250,244,238,0.9));
-      border: 1px solid var(--line);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .calendar-head {
-      min-height: auto;
-      background: #f7f0e8;
-      justify-content: center;
-      align-items: start;
-      font-weight: 700;
-    }
-    .calendar-head small {
-      color: var(--muted);
-      font-weight: 500;
-    }
-    .cell-empty {
-      flex: 1;
-      border: 1px dashed rgba(145, 120, 103, 0.25);
-      border-radius: 14px;
-      min-height: 42px;
-      background: rgba(255,255,255,0.5);
-    }
-    .gantt-card {
-      color: white;
-      border-radius: 16px;
-      padding: 10px 12px;
-      box-shadow: 0 12px 22px rgba(51, 34, 22, 0.12);
-      border: 1px solid rgba(255,255,255,0.12);
-      background: var(--general);
-    }
-    .filter-hidden { display: none !important; }
-    .gantt-card.status-moved,
-    .legend-dot.status-moved { background: var(--moved); }
-    .gantt-card.status-completed,
-    .legend-dot.status-completed { background: var(--done); }
-    .gantt-card.status-partial,
-    .legend-dot.status-partial { background: var(--partial); }
-    .gantt-card.status-incomplete,
-    .legend-dot.status-incomplete { background: var(--incomplete); }
-    .gantt-card.status-pending-sync,
-    .legend-dot.status-pending-sync { background: var(--pending); }
-    .gantt-card.status-unsynced,
-    .legend-dot.status-unsynced { background: var(--unsynced); }
-    .gantt-card.status-conditional,
-    .legend-dot.status-conditional { background: var(--conditional); }
-    .gantt-card.status-planned,
-    .legend-dot.status-planned { background: var(--planned); }
-    .gantt-conditional {
-      outline: 2px dashed rgba(255,255,255,0.7);
-      outline-offset: -6px;
-    }
-    .gantt-time {
-      font-size: 12px;
-      opacity: 0.9;
-      margin-bottom: 6px;
-    }
-    .gantt-title {
-      font-size: 15px;
-      font-weight: 700;
-      line-height: 1.2;
-    }
-    .gantt-state {
-      margin-top: 8px;
-      font-size: 12px;
-      opacity: 0.95;
-    }
-    .today-meta {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 16px;
-    }
-    .kicker {
-      display: block;
-      color: var(--muted);
-      font-size: 12px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-    .external-chip-wrap {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .external-chip {
-      display: inline-flex;
-      align-items: center;
-      padding: 7px 10px;
-      border-radius: 999px;
-      background: #f3ebdf;
-      border: 1px solid var(--line);
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .focus-notes {
-      margin: 0 0 18px;
-      color: var(--muted);
-      padding-left: 18px;
-    }
-    .today-task-grid, .condition-grid, .experiment-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 14px;
-    }
-    .today-task, .condition-card, .experiment-card {
-      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(249,243,237,0.9));
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 18px;
-    }
-    .today-task-top, .timeline-step-top, .condition-meta {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-    }
-    .task-time, .condition-meta, .timeline-step-top {
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .today-task h3, .condition-card h3, .experiment-card h3 {
-      margin: 0 0 8px;
-      font-size: 22px;
-      line-height: 1.15;
-    }
-    .task-stream, .condition-exp, .experiment-goal {
-      margin: 0 0 12px;
-      color: var(--muted);
-    }
-    .task-deliverable, .task-condition, .timeline-rule, .condition-card p {
-      margin: 8px 0;
-    }
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 7px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-      color: white;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-    }
-    .status-completed { background: var(--done); }
-    .status-partial { background: var(--partial); }
-    .status-moved { background: var(--moved); }
-    .status-incomplete { background: var(--incomplete); }
-    .status-pending-sync { background: var(--pending); }
-    .status-unsynced { background: var(--unsynced); }
-    .status-conditional { background: var(--conditional); }
-    .status-planned { background: var(--planned); }
-    .stream-pill {
-      display: inline-flex;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: #f4ebdf;
-      border: 1px solid var(--line);
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-    .experiment-head {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .timeline-list {
-      display: grid;
-      gap: 10px;
-    }
-    .timeline-step {
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 14px;
-      background: rgba(255,255,255,0.7);
-    }
-    .timeline-step h4 {
-      margin: 0;
-      font-size: 18px;
-    }
-    .reason-details {
-      margin-top: 10px;
-      border-top: 1px dashed rgba(145, 120, 103, 0.35);
-      padding-top: 10px;
-      color: var(--muted);
-    }
-    .reason-details summary {
-      cursor: pointer;
-      color: var(--ink);
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-    .reason-details p { margin: 8px 0; }
-    .history-link {
-      margin: 12px 0 0;
-      font-size: 13px;
-    }
-    .history-link a {
-      color: var(--mouse);
-      text-decoration: none;
-      font-weight: 600;
-    }
-    .empty-state {
-      padding: 22px;
-      border-radius: 18px;
-      border: 1px dashed rgba(135, 104, 82, 0.35);
-      color: var(--muted);
-      background: rgba(255,255,255,0.62);
-    }
-    .muted { color: var(--muted); }
-    @media (max-width: 1080px) {
-      .hero-stats, .today-meta { grid-template-columns: 1fr 1fr; }
-      .gantt-row { grid-template-columns: 220px minmax(780px, 1fr); }
-    }
-    @media (max-width: 720px) {
-      .shell { padding: 16px; }
-      .hero h1 { font-size: 34px; }
-      .hero-stats, .today-meta { grid-template-columns: 1fr; }
-      .panel { padding: 18px; }
-      .gantt-row { grid-template-columns: 180px minmax(720px, 1fr); }
-    }
+  --bg: #f4efe8;
+  --paper: #fffdfa;
+  --ink: #2d241f;
+  --muted: #766960;
+  --line: #e8ddd0;
+  --shadow: 0 18px 45px rgba(86, 58, 37, 0.08);
+  --radius: 28px;
+  --rna: #c95e49;
+  --cell: #1b8a83;
+  --spheroid: #6469d8;
+  --flow: #ee934d;
+  --material: #2d6fab;
+  --robot: #2e9b7d;
+  --mouse: #9c4e44;
+  --prep: #967321;
+  --general: #67727e;
+  --done: #17664f;
+  --partial: #845b19;
+  --moved: #8a6d61;
+  --incomplete: #9e3f39;
+  --pending: #7a5d2a;
+  --unsynced: #8a4c4c;
+  --conditional: #5a55b8;
+  --planned: #5f6d7a;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(242, 186, 138, 0.26), transparent 32%),
+    linear-gradient(180deg, #f8f4ee 0%, var(--bg) 100%);
+  color: var(--ink);
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+}
+.shell { max-width: 1580px; margin: 0 auto; padding: 28px; }
+.hero {
+  background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(255,247,239,0.92));
+  border: 1px solid rgba(146, 106, 77, 0.12);
+  box-shadow: var(--shadow);
+  border-radius: 34px;
+  padding: 28px 30px;
+  display: grid;
+  gap: 22px;
+}
+.hero h1 { margin: 0; font-size: 44px; line-height: 1.05; }
+.hero p { margin: 0; color: var(--muted); }
+.hero-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+.stat-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 16px 18px;
+}
+.stat-card span {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.stat-card strong { font-size: 28px; }
+.legend-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  align-items: center;
+}
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+.panel {
+  margin-top: 22px;
+  background: rgba(255,253,250,0.95);
+  border: 1px solid rgba(146, 106, 77, 0.12);
+  box-shadow: var(--shadow);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.panel-head h2 { margin: 0; font-size: 30px; }
+.panel-head p { margin: 0; color: var(--muted); }
+.panel-toggle {
+  border: 1px solid var(--line);
+  background: #f8f1e9;
+  border-radius: 999px;
+  color: var(--ink);
+  padding: 8px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+.panel.collapsed .panel-body { display: none; }
+.controls-panel {
+  margin-top: 22px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+}
+.control {
+  display: grid;
+  gap: 8px;
+}
+.control label {
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.control input, .control select {
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.92);
+  font: inherit;
+  color: var(--ink);
+}
+.toggle-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding-bottom: 4px;
+}
+.toggle-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+.gantt-shell {
+  overflow-x: auto;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+.gantt-row {
+  display: grid;
+  grid-template-columns: 280px minmax(900px, 1fr);
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+.gantt-row-head {
+  position: sticky;
+  top: 0;
+  background: rgba(255, 253, 250, 0.92);
+  z-index: 2;
+  padding-bottom: 8px;
+}
+.gantt-stream {
+  padding: 14px 12px;
+  border-radius: 18px;
+  background: rgba(250, 243, 235, 0.95);
+  border: 1px solid var(--line);
+  min-height: 100%;
+}
+.gantt-stream strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.gantt-stream small {
+  color: var(--muted);
+  font-size: 13px;
+}
+.gantt-stream-head {
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.gantt-grid {
+  display: grid;
+  gap: 10px;
+}
+.calendar-cell {
+  min-height: 112px;
+  border-radius: 18px;
+  padding: 10px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(250,244,238,0.9));
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.calendar-head {
+  min-height: auto;
+  background: #f7f0e8;
+  justify-content: center;
+  align-items: start;
+  font-weight: 700;
+}
+.calendar-head small {
+  color: var(--muted);
+  font-weight: 500;
+}
+.cell-empty {
+  flex: 1;
+  border: 1px dashed rgba(145, 120, 103, 0.25);
+  border-radius: 14px;
+  min-height: 42px;
+  background: rgba(255,255,255,0.5);
+}
+.gantt-card {
+  color: white;
+  border-radius: 16px;
+  padding: 10px 12px;
+  box-shadow: 0 12px 22px rgba(51, 34, 22, 0.12);
+  border: 1px solid rgba(255,255,255,0.12);
+  background: var(--general);
+}
+.filter-hidden { display: none !important; }
+.gantt-card.status-moved,
+.legend-dot.status-moved { background: var(--moved); }
+.gantt-card.status-completed,
+.legend-dot.status-completed { background: var(--done); }
+.gantt-card.status-partial,
+.legend-dot.status-partial { background: var(--partial); }
+.gantt-card.status-incomplete,
+.legend-dot.status-incomplete { background: var(--incomplete); }
+.gantt-card.status-pending-sync,
+.legend-dot.status-pending-sync { background: var(--pending); }
+.gantt-card.status-unsynced,
+.legend-dot.status-unsynced { background: var(--unsynced); }
+.gantt-card.status-conditional,
+.legend-dot.status-conditional { background: var(--conditional); }
+.gantt-card.status-planned,
+.legend-dot.status-planned { background: var(--planned); }
+.gantt-conditional {
+  outline: 2px dashed rgba(255,255,255,0.7);
+  outline-offset: -6px;
+}
+.gantt-time {
+  font-size: 12px;
+  opacity: 0.9;
+  margin-bottom: 6px;
+}
+.gantt-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.gantt-state {
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: 0.95;
+}
+.today-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.kicker {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.external-chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.external-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #f3ebdf;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+}
+.focus-notes {
+  margin: 0 0 18px;
+  color: var(--muted);
+  padding-left: 18px;
+}
+.today-task-grid, .condition-grid, .experiment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.today-task, .condition-card, .experiment-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(249,243,237,0.9));
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 18px;
+}
+.today-task-top, .timeline-step-top, .condition-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.task-time, .condition-meta, .timeline-step-top {
+  color: var(--muted);
+  font-size: 13px;
+}
+.today-task h3, .condition-card h3, .experiment-card h3 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  line-height: 1.15;
+}
+.task-stream, .condition-exp, .experiment-goal {
+  margin: 0 0 12px;
+  color: var(--muted);
+}
+.task-deliverable, .task-condition, .timeline-rule, .condition-card p {
+  margin: 8px 0;
+}
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.status-completed { background: var(--done); }
+.status-partial { background: var(--partial); }
+.status-moved { background: var(--moved); }
+.status-incomplete { background: var(--incomplete); }
+.status-pending-sync { background: var(--pending); }
+.status-unsynced { background: var(--unsynced); }
+.status-conditional { background: var(--conditional); }
+.status-planned { background: var(--planned); }
+.stream-pill {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f4ebdf;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.experiment-head {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.timeline-list {
+  display: grid;
+  gap: 10px;
+}
+.timeline-step {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255,255,255,0.7);
+}
+.timeline-step h4 {
+  margin: 0;
+  font-size: 18px;
+}
+.reason-details {
+  margin-top: 10px;
+  border-top: 1px dashed rgba(145, 120, 103, 0.35);
+  padding-top: 10px;
+  color: var(--muted);
+}
+.reason-details summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.reason-details p { margin: 8px 0; }
+.history-link {
+  margin: 12px 0 0;
+  font-size: 13px;
+}
+.history-link a {
+  color: var(--mouse);
+  text-decoration: none;
+  font-weight: 600;
+}
+.empty-state {
+  padding: 22px;
+  border-radius: 18px;
+  border: 1px dashed rgba(135, 104, 82, 0.35);
+  color: var(--muted);
+  background: rgba(255,255,255,0.62);
+}
+.muted { color: var(--muted); }
+@media (max-width: 1080px) {
+  .hero-stats, .today-meta { grid-template-columns: 1fr 1fr; }
+  .gantt-row { grid-template-columns: 220px minmax(780px, 1fr); }
+}
+@media (max-width: 720px) {
+  .shell { padding: 16px; }
+  .hero h1 { font-size: 34px; }
+  .hero-stats, .today-meta { grid-template-columns: 1fr; }
+  .panel { padding: 18px; }
+  .gantt-row { grid-template-columns: 180px minmax(720px, 1fr); }
+}
+
+    .gantt-grid { grid-template-columns: repeat(15, minmax(120px, 1fr)); }
   </style>
 </head>
 <body>
@@ -461,15 +462,15 @@
         <div>
           <p class="kicker">Research Planner Template</p>
           <h1>Anonymized Wet-Lab Demo</h1>
-          <p>Mar 09 - Mar 23, 2026. Short window for execution, review, and rolling replanning.</p>
+          <p>Mar 17 - Mar 31, 2026. Short window for execution, review, and rolling replanning.</p>
         </div>
         <div class="legend-bar"><span class="legend-chip"><i class="legend-dot status-completed"></i>Completed</span><span class="legend-chip"><i class="legend-dot status-partial"></i>Partially Done</span><span class="legend-chip"><i class="legend-dot status-moved"></i>Moved</span><span class="legend-chip"><i class="legend-dot status-incomplete"></i>Incomplete</span><span class="legend-chip"><i class="legend-dot status-pending-sync"></i>Pending Sync</span><span class="legend-chip"><i class="legend-dot status-unsynced"></i>Unsynced</span><span class="legend-chip"><i class="legend-dot status-conditional"></i>Conditional</span><span class="legend-chip"><i class="legend-dot status-planned"></i>Planned</span></div>
       </div>
       <div class="hero-stats">
-        <article class="stat-card"><span>Completed / Partial</span><strong>7</strong></article>
+        <article class="stat-card"><span>Completed / Partial</span><strong>0</strong></article>
         <article class="stat-card"><span>Moved / Incomplete</span><strong>0</strong></article>
         <article class="stat-card"><span>Conditional</span><strong>3</strong></article>
-        <article class="stat-card"><span>Pending Sync</span><strong>7</strong></article>
+        <article class="stat-card"><span>Pending Sync</span><strong>5</strong></article>
       </div>
     </section>
     <section class="panel controls-panel">
@@ -496,13 +497,13 @@
         <label><input id="today-only" type="checkbox"> Today only</label>
       </div>
     </section>
-    <section class="panel" data-panel="window-overview"><div class="panel-head"><div><h2>Window Overview</h2><p>Past week, today, and the upcoming week in one grid.</p></div><button class="panel-toggle" type="button">Collapse</button></div><div class="panel-body"><div class="gantt-shell"><div class="gantt-row gantt-row-head"><div class="gantt-stream gantt-stream-head">Workstream</div><div class="gantt-grid gantt-grid-head"><div class="calendar-cell calendar-head"><span>03/09</span><small>Mon</small></div><div class="calendar-cell calendar-head"><span>03/10</span><small>Tue</small></div><div class="calendar-cell calendar-head"><span>03/11</span><small>Wed</small></div><div class="calendar-cell calendar-head"><span>03/12</span><small>Thu</small></div><div class="calendar-cell calendar-head"><span>03/13</span><small>Fri</small></div><div class="calendar-cell calendar-head"><span>03/14</span><small>Sat</small></div><div class="calendar-cell calendar-head"><span>03/15</span><small>Sun</small></div><div class="calendar-cell calendar-head"><span>03/16</span><small>Mon</small></div><div class="calendar-cell calendar-head"><span>03/17</span><small>Tue</small></div><div class="calendar-cell calendar-head"><span>03/18</span><small>Wed</small></div><div class="calendar-cell calendar-head"><span>03/19</span><small>Thu</small></div><div class="calendar-cell calendar-head"><span>03/20</span><small>Fri</small></div><div class="calendar-cell calendar-head"><span>03/21</span><small>Sat</small></div><div class="calendar-cell calendar-head"><span>03/22</span><small>Sun</small></div><div class="calendar-cell calendar-head"><span>03/23</span><small>Mon</small></div></div></div><div class="gantt-row filter-row" data-stream="rna" data-count="2"><div class="gantt-stream"><strong>Analysis / Slides</strong><small>2 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-09"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-10"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-11"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-12"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-13"><article class="gantt-card filter-item status-partial " data-stream="rna" data-status="partial" data-title="format rna summary slides figures are ready; the final wording still needs one more pass." data-date="2026-03-13"><div class="gantt-time">09:30-11:00</div><div class="gantt-title">Format RNA summary slides</div><div class="gantt-state">Partially Done</div><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Figures are ready; the final wording still needs one more pass.</p></details></article></div><div class="calendar-cell" data-date="2026-03-14"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-15"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-16"><article class="gantt-card filter-item status-pending-sync " data-stream="rna" data-status="pending_sync" data-title="update rna slide deck and figures " data-date="2026-03-16"><div class="gantt-time">11:00-12:15</div><div class="gantt-title">Update RNA slide deck and figures</div><div class="gantt-state">Pending Sync</div></article></div><div class="calendar-cell" data-date="2026-03-17"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-18"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-19"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-20"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><div class="cell-empty"></div></div></div></div><div class="gantt-row filter-row" data-stream="cell" data-count="6"><div class="gantt-stream"><strong>Cell Expansion</strong><small>6 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-09"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-10"><article class="gantt-card filter-item status-unsynced " data-stream="cell" data-status="unsynced" data-title="cell bank recovery check " data-date="2026-03-10"><div class="gantt-time">09:30-10:00</div><div class="gantt-title">Cell bank recovery check</div><div class="gantt-state">Unsynced</div></article></div><div class="calendar-cell" data-date="2026-03-11"><article class="gantt-card filter-item status-unsynced " data-stream="cell" data-status="unsynced" data-title="passage adherent cells for assay pilot " data-date="2026-03-11"><div class="gantt-time">10:00-10:50</div><div class="gantt-title">Passage adherent cells for assay pilot</div><div class="gantt-state">Unsynced</div></article></div><div class="calendar-cell" data-date="2026-03-12"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-13"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-14"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-15"><article class="gantt-card filter-item status-completed " data-stream="cell" data-status="completed" data-title="seed 3d spheroid plates seeded ten wells with the same starting density." data-date="2026-03-15"><div class="gantt-time">13:30-14:30</div><div class="gantt-title">Seed 3D spheroid plates</div><div class="gantt-state">Completed</div><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Seeded ten wells with the same starting density.</p></details></article><article class="gantt-card filter-item status-completed " data-stream="cell" data-status="completed" data-title="passage anchor culture for expansion one flask was retained as the anchor culture." data-date="2026-03-15"><div class="gantt-time">15:30-16:15</div><div class="gantt-title">Passage anchor culture for expansion</div><div class="gantt-state">Completed</div><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> One flask was retained as the anchor culture.</p></details></article><article class="gantt-card filter-item status-partial " data-stream="cell" data-status="partial" data-title="expand gfp reporter culture 5 flasks to 10 flasks the culture expanded to ten flasks but growth remains slower than baseline after thaw." data-date="2026-03-15"><div class="gantt-time">16:30-17:45</div><div class="gantt-title">Expand GFP reporter culture 5 flasks to 1…</div><div class="gantt-state">Partially Done</div><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> The culture expanded to ten flasks but growth remains slower than baseline after thaw.</p></details></article></div><div class="calendar-cell" data-date="2026-03-16"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-17"><article class="gantt-card filter-item status-conditional gantt-conditional" data-stream="cell" data-status="conditional" data-title="if reporter culture is ready: expand to 20 flasks and seed spheroids reporter growth is slower than the baseline expansion model." data-date="2026-03-17"><div class="gantt-time">15:00-16:00</div><div class="gantt-title">If reporter culture is ready: expand to 2…</div><div class="gantt-state">Conditional</div><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Reporter growth is slower than the baseline expansion model.</p><p><strong>Blocking reason:</strong> The Tuesday afternoon density check has not happened yet.</p><p><strong>Trigger condition:</strong> Proceed only if all ten flasks reach the target density at the Tuesday afternoon check.</p><p><strong>Next check:</strong> 2026-03-17 15:00</p></details></article></div><div class="calendar-cell" data-date="2026-03-18"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-19"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-20"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><div class="cell-empty"></div></div></div></div><div class="gantt-row filter-row" data-stream="spheroid" data-count="4"><div class="gantt-stream"><strong>3D Models</strong><small>4 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-09"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-10"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-11"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-12"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-13"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-14"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-15"><article class="gantt-card filter-item status-completed " data-stream="spheroid" data-status="completed" data-title="seed 3d spheroid plates seeded ten wells with the same starting density." data-date="2026-03-15"><div class="gantt-time">13:30-14:30</div><div class="gantt-title">Seed 3D spheroid plates</div><div class="gantt-state">Completed</div><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Seeded ten wells with the same starting density.</p></details></article></div><div class="calendar-cell" data-date="2026-03-16"><article class="gantt-card filter-item status-pending-sync " data-stream="spheroid" data-status="pending_sync" data-title="check spheroid morphology day 1 " data-date="2026-03-16"><div class="gantt-time">15:00-15:20</div><div class="gantt-title">Check spheroid morphology day 1</div><div class="gantt-state">Pending Sync</div></article></div><div class="calendar-cell" data-date="2026-03-17"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-18"><article class="gantt-card filter-item status-planned " data-stream="spheroid" data-status="planned" data-title="check spheroid morphology day 2 " data-date="2026-03-18"><div class="gantt-time">10:45-11:05</div><div class="gantt-title">Check spheroid morphology day 2</div><div class="gantt-state">Planned</div></article><article class="gantt-card filter-item status-conditional gantt-conditional" data-stream="spheroid" data-status="conditional" data-title="if spheroids are compact: embed in matrix embedding depends on the day-2 morphology check." data-date="2026-03-18"><div class="gantt-time">12:30-13:00</div><div class="gantt-title">If spheroids are compact: embed in matrix</div><div class="gantt-state">Conditional</div><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Embedding depends on the day-2 morphology check.</p><p><strong>Blocking reason:</strong> Need the day-2 morphology note first.</p><p><strong>Trigger condition:</strong> Embed only if the spheroids are compact and stable during transfer.</p><p><strong>Next check:</strong> 2026-03-18 12:30</p></details></article></div><div class="calendar-cell" data-date="2026-03-19"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-20"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><div class="cell-empty"></div></div></div></div><div class="gantt-row filter-row" data-stream="flow" data-count="4"><div class="gantt-stream"><strong>Assays / Flow</strong><small>4 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-09"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-10"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-11"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-12"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-13"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-14"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-15"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-16"><article class="gantt-card filter-item status-pending-sync " data-stream="flow" data-status="pending_sync" data-title="run 0h surface labeling flow panel " data-date="2026-03-16"><div class="gantt-time">08:30-09:15</div><div class="gantt-title">Run 0h surface labeling flow panel</div><div class="gantt-state">Pending Sync</div></article><article class="gantt-card filter-item status-pending-sync " data-stream="flow" data-status="pending_sync" data-title="start uptake assay with dye particle panel " data-date="2026-03-16"><div class="gantt-time">09:30-10:30</div><div class="gantt-title">Start uptake assay with dye particle panel</div><div class="gantt-state">Pending Sync</div></article></div><div class="calendar-cell" data-date="2026-03-17"><article class="gantt-card filter-item status-planned " data-stream="flow" data-status="planned" data-title="run 24h flow timepoint " data-date="2026-03-17"><div class="gantt-time">09:30-10:30</div><div class="gantt-title">Run 24h flow timepoint</div><div class="gantt-state">Planned</div></article></div><div class="calendar-cell" data-date="2026-03-18"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-19"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-20"><article class="gantt-card filter-item status-planned " data-stream="flow" data-status="planned" data-title="run 48h flow timepoint " data-date="2026-03-20"><div class="gantt-time">09:30-10:30</div><div class="gantt-title">Run 48h flow timepoint</div><div class="gantt-state">Planned</div></article></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><div class="cell-empty"></div></div></div></div><div class="gantt-row filter-row" data-stream="material" data-count="3"><div class="gantt-stream"><strong>Material Characterization</strong><small>3 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-09"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-10"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-11"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-12"><article class="gantt-card filter-item status-unsynced " data-stream="material" data-status="unsynced" data-title="prepare dls samples " data-date="2026-03-12"><div class="gantt-time">09:45-10:30</div><div class="gantt-title">Prepare DLS samples</div><div class="gantt-state">Unsynced</div></article><article class="gantt-card filter-item status-completed " data-stream="material" data-status="completed" data-title="dls readout sizing run completed with the matched sample batch." data-date="2026-03-12"><div class="gantt-time">13:30-14:30</div><div class="gantt-title">DLS readout</div><div class="gantt-state">Completed</div><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Sizing run completed with the matched sample batch.</p></details></article></div><div class="calendar-cell" data-date="2026-03-13"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-14"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-15"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-16"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-17"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-18"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-19"><article class="gantt-card filter-item status-planned " data-stream="material" data-status="planned" data-title="zeta potential measurement " data-date="2026-03-19"><div class="gantt-time">13:30-14:00</div><div class="gantt-title">Zeta potential measurement</div><div class="gantt-state">Planned</div></article></div><div class="calendar-cell" data-date="2026-03-20"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><div class="cell-empty"></div></div></div></div><div class="gantt-row filter-row" data-stream="robot" data-count="0"><div class="gantt-stream"><strong>Motion Tests</strong><small>0 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-09"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-10"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-11"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-12"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-13"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-14"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-15"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-16"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-17"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-18"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-19"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-20"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><div class="cell-empty"></div></div></div></div><div class="gantt-row filter-row" data-stream="mouse" data-count="3"><div class="gantt-stream"><strong>Animal Work</strong><small>3 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-09"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-10"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-11"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-12"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-13"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-14"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-15"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-16"><article class="gantt-card filter-item status-completed " data-stream="mouse" data-status="completed" data-title="confirm animal cohort arrival and cage assignment twenty five-week-old male mice were confirmed in the facility." data-date="2026-03-16"><div class="gantt-time">17:00-17:30</div><div class="gantt-title">Confirm animal cohort arrival and cage as…</div><div class="gantt-state">Completed</div><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Twenty five-week-old male mice were confirmed in the facility.</p></details></article></div><div class="calendar-cell" data-date="2026-03-17"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-18"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-19"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-20"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><article class="gantt-card filter-item status-planned " data-stream="mouse" data-status="planned" data-title="in vivo cohort preparation window " data-date="2026-03-23"><div class="gantt-time">10:00-11:00</div><div class="gantt-title">In vivo cohort preparation window</div><div class="gantt-state">Planned</div></article><article class="gantt-card filter-item status-conditional gantt-conditional" data-stream="mouse" data-status="conditional" data-title="if cells and mice are ready: cohort start this remains a gated readiness window." data-date="2026-03-23"><div class="gantt-time">14:00-16:30</div><div class="gantt-title">If cells and mice are ready: cohort start</div><div class="gantt-state">Conditional</div><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> This remains a gated readiness window.</p><p><strong>Blocking reason:</strong> Need both expansion and animal readiness to remain aligned.</p><p><strong>Trigger condition:</strong> Only begin if both the expanded cell stock and the animal cohort are available on the same day.</p><p><strong>Next check:</strong> 2026-03-23 14:00</p></details></article></div></div></div><div class="gantt-row filter-row" data-stream="prep" data-count="1"><div class="gantt-stream"><strong>Preparation / Follow-up</strong><small>1 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-09"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-10"><article class="gantt-card filter-item status-completed " data-stream="prep" data-status="completed" data-title="reagent inventory review inventory and reagent expiry dates were checked." data-date="2026-03-10"><div class="gantt-time">14:00-14:45</div><div class="gantt-title">Reagent inventory review</div><div class="gantt-state">Completed</div><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Inventory and reagent expiry dates were checked.</p></details></article></div><div class="calendar-cell" data-date="2026-03-11"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-12"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-13"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-14"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-15"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-16"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-17"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-18"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-19"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-20"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><div class="cell-empty"></div></div></div></div><div class="gantt-row filter-row" data-stream="general" data-count="0"><div class="gantt-stream"><strong>General</strong><small>0 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-09"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-10"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-11"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-12"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-13"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-14"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-15"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-16"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-17"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-18"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-19"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-20"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><div class="cell-empty"></div></div></div></div></div></div></section>
-    <section class="panel today-panel" data-panel="today-plan"><div class="panel-head"><div><h2>Today Plan</h2><p>Monday, March 16, 2026</p></div><button class="panel-toggle" type="button">Collapse</button></div><div class="panel-body"><div class="today-meta"><div><span class="kicker">Focus</span><strong>Start the assay line, review morphology, and close the readiness gaps.</strong></div><div><span class="kicker">External commitments</span><div class="external-chip-wrap"><span class="muted">No competing calendar blocks.</span></div></div></div><ul class="focus-notes"><li>Treat the cohort check as a prerequisite, not as the start itself.</li></ul><div class="today-task-grid"><article class="today-task filter-item" data-stream="flow" data-status="pending_sync" data-title="run 0h surface labeling flow panel  " data-date="2026-03-16"><div class="today-task-top"><span class="task-time">08:30-09:15</span><span class="status-badge status-pending-sync">Pending Sync</span></div><h3>Run 0h surface labeling flow panel</h3><p class="task-stream">Assays / Flow</p><p class="task-deliverable"><strong>Deliverable:</strong> 0h fluorescence readout for the labeling panel.</p><p class="history-link"><a href="../history/summaries/2026-03.html#day-2026-03-16">Open matching history day</a></p></article><article class="today-task filter-item" data-stream="flow" data-status="pending_sync" data-title="start uptake assay with dye particle panel  " data-date="2026-03-16"><div class="today-task-top"><span class="task-time">09:30-10:30</span><span class="status-badge status-pending-sync">Pending Sync</span></div><h3>Start uptake assay with dye particle panel</h3><p class="task-stream">Assays / Flow</p><p class="task-deliverable"><strong>Deliverable:</strong> Uptake assay started for the next time point.</p><p class="history-link"><a href="../history/summaries/2026-03.html#day-2026-03-16">Open matching history day</a></p></article><article class="today-task filter-item" data-stream="rna" data-status="pending_sync" data-title="update rna slide deck and figures  " data-date="2026-03-16"><div class="today-task-top"><span class="task-time">11:00-12:15</span><span class="status-badge status-pending-sync">Pending Sync</span></div><h3>Update RNA slide deck and figures</h3><p class="task-stream">Analysis / Slides</p><p class="task-deliverable"><strong>Deliverable:</strong> Near-final slide deck for the weekly review.</p><p class="history-link"><a href="../history/summaries/2026-03.html#day-2026-03-16">Open matching history day</a></p></article><article class="today-task filter-item" data-stream="spheroid" data-status="pending_sync" data-title="check spheroid morphology day 1  " data-date="2026-03-16"><div class="today-task-top"><span class="task-time">15:00-15:20</span><span class="status-badge status-pending-sync">Pending Sync</span></div><h3>Check spheroid morphology day 1</h3><p class="task-stream">3D Models</p><p class="task-deliverable"><strong>Deliverable:</strong> Morphology notes for all ten wells.</p><p class="history-link"><a href="../history/summaries/2026-03.html#day-2026-03-16">Open matching history day</a></p></article><article class="today-task filter-item" data-stream="mouse" data-status="completed" data-title="confirm animal cohort arrival and cage assignment twenty five-week-old male mice were confirmed in the facility. " data-date="2026-03-16"><div class="today-task-top"><span class="task-time">17:00-17:30</span><span class="status-badge status-completed">Completed</span></div><h3>Confirm animal cohort arrival and cage assignment</h3><p class="task-stream">Animal Work</p><p class="task-deliverable"><strong>Deliverable:</strong> Cohort note added to the tracker.</p><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Twenty five-week-old male mice were confirmed in the facility.</p></details><p class="history-link"><a href="../history/summaries/2026-03.html#day-2026-03-16">Open matching history day</a></p></article></div></div></section>
+    <section class="panel" data-panel="window-overview"><div class="panel-head"><div><h2>Window Overview</h2><p>Past week, today, and the upcoming week in one grid.</p></div><button class="panel-toggle" type="button">Collapse</button></div><div class="panel-body"><div class="gantt-shell"><div class="gantt-row gantt-row-head"><div class="gantt-stream gantt-stream-head">Workstream</div><div class="gantt-grid gantt-grid-head"><div class="calendar-cell calendar-head"><span>03/17</span><small>Tue</small></div><div class="calendar-cell calendar-head"><span>03/18</span><small>Wed</small></div><div class="calendar-cell calendar-head"><span>03/19</span><small>Thu</small></div><div class="calendar-cell calendar-head"><span>03/20</span><small>Fri</small></div><div class="calendar-cell calendar-head"><span>03/21</span><small>Sat</small></div><div class="calendar-cell calendar-head"><span>03/22</span><small>Sun</small></div><div class="calendar-cell calendar-head"><span>03/23</span><small>Mon</small></div><div class="calendar-cell calendar-head"><span>03/24</span><small>Tue</small></div><div class="calendar-cell calendar-head"><span>03/25</span><small>Wed</small></div><div class="calendar-cell calendar-head"><span>03/26</span><small>Thu</small></div><div class="calendar-cell calendar-head"><span>03/27</span><small>Fri</small></div><div class="calendar-cell calendar-head"><span>03/28</span><small>Sat</small></div><div class="calendar-cell calendar-head"><span>03/29</span><small>Sun</small></div><div class="calendar-cell calendar-head"><span>03/30</span><small>Mon</small></div><div class="calendar-cell calendar-head"><span>03/31</span><small>Tue</small></div></div></div><div class="gantt-row filter-row" data-stream="rna" data-count="0"><div class="gantt-stream"><strong>Analysis / Slides</strong><small>0 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-17"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-18"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-19"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-20"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-24"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-25"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-26"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-27"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-28"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-29"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-30"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-31"><div class="cell-empty"></div></div></div></div><div class="gantt-row filter-row" data-stream="cell" data-count="1"><div class="gantt-stream"><strong>Cell Expansion</strong><small>1 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-17"><article class="gantt-card filter-item status-conditional gantt-conditional" data-stream="cell" data-status="conditional" data-title="if reporter culture is ready: expand to 20 flasks and seed spheroids reporter growth is slower than the baseline expansion model." data-date="2026-03-17"><div class="gantt-time">15:00-16:00</div><div class="gantt-title">If reporter culture is ready: expand to 2…</div><div class="gantt-state">Conditional</div><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Reporter growth is slower than the baseline expansion model.</p><p><strong>Blocking reason:</strong> The Tuesday afternoon density check has not happened yet.</p><p><strong>Trigger condition:</strong> Proceed only if all ten flasks reach the target density at the Tuesday afternoon check.</p><p><strong>Next check:</strong> 2026-03-17 15:00</p></details></article></div><div class="calendar-cell" data-date="2026-03-18"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-19"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-20"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-24"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-25"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-26"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-27"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-28"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-29"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-30"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-31"><div class="cell-empty"></div></div></div></div><div class="gantt-row filter-row" data-stream="spheroid" data-count="2"><div class="gantt-stream"><strong>3D Models</strong><small>2 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-17"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-18"><article class="gantt-card filter-item status-unsynced " data-stream="spheroid" data-status="unsynced" data-title="check spheroid morphology day 2 " data-date="2026-03-18"><div class="gantt-time">10:45-11:05</div><div class="gantt-title">Check spheroid morphology day 2</div><div class="gantt-state">Unsynced</div></article><article class="gantt-card filter-item status-conditional gantt-conditional" data-stream="spheroid" data-status="conditional" data-title="if spheroids are compact: embed in matrix embedding depends on the day-2 morphology check." data-date="2026-03-18"><div class="gantt-time">12:30-13:00</div><div class="gantt-title">If spheroids are compact: embed in matrix</div><div class="gantt-state">Conditional</div><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Embedding depends on the day-2 morphology check.</p><p><strong>Blocking reason:</strong> Need the day-2 morphology note first.</p><p><strong>Trigger condition:</strong> Embed only if the spheroids are compact and stable during transfer.</p><p><strong>Next check:</strong> 2026-03-18 12:30</p></details></article></div><div class="calendar-cell" data-date="2026-03-19"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-20"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-24"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-25"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-26"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-27"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-28"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-29"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-30"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-31"><div class="cell-empty"></div></div></div></div><div class="gantt-row filter-row" data-stream="flow" data-count="2"><div class="gantt-stream"><strong>Assays / Flow</strong><small>2 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-17"><article class="gantt-card filter-item status-unsynced " data-stream="flow" data-status="unsynced" data-title="run 24h flow timepoint " data-date="2026-03-17"><div class="gantt-time">09:30-10:30</div><div class="gantt-title">Run 24h flow timepoint</div><div class="gantt-state">Unsynced</div></article></div><div class="calendar-cell" data-date="2026-03-18"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-19"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-20"><article class="gantt-card filter-item status-unsynced " data-stream="flow" data-status="unsynced" data-title="run 48h flow timepoint " data-date="2026-03-20"><div class="gantt-time">09:30-10:30</div><div class="gantt-title">Run 48h flow timepoint</div><div class="gantt-state">Unsynced</div></article></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-24"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-25"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-26"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-27"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-28"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-29"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-30"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-31"><div class="cell-empty"></div></div></div></div><div class="gantt-row filter-row" data-stream="material" data-count="1"><div class="gantt-stream"><strong>Material Characterization</strong><small>1 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-17"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-18"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-19"><article class="gantt-card filter-item status-unsynced " data-stream="material" data-status="unsynced" data-title="zeta potential measurement " data-date="2026-03-19"><div class="gantt-time">13:30-14:00</div><div class="gantt-title">Zeta potential measurement</div><div class="gantt-state">Unsynced</div></article></div><div class="calendar-cell" data-date="2026-03-20"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-24"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-25"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-26"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-27"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-28"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-29"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-30"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-31"><div class="cell-empty"></div></div></div></div><div class="gantt-row filter-row" data-stream="robot" data-count="0"><div class="gantt-stream"><strong>Motion Tests</strong><small>0 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-17"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-18"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-19"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-20"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-24"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-25"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-26"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-27"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-28"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-29"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-30"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-31"><div class="cell-empty"></div></div></div></div><div class="gantt-row filter-row" data-stream="mouse" data-count="2"><div class="gantt-stream"><strong>Animal Work</strong><small>2 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-17"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-18"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-19"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-20"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><article class="gantt-card filter-item status-pending-sync " data-stream="mouse" data-status="pending_sync" data-title="in vivo cohort preparation window " data-date="2026-03-23"><div class="gantt-time">10:00-11:00</div><div class="gantt-title">In vivo cohort preparation window</div><div class="gantt-state">Pending Sync</div></article><article class="gantt-card filter-item status-conditional gantt-conditional" data-stream="mouse" data-status="conditional" data-title="if cells and mice are ready: cohort start this remains a gated readiness window." data-date="2026-03-23"><div class="gantt-time">14:00-16:30</div><div class="gantt-title">If cells and mice are ready: cohort start</div><div class="gantt-state">Conditional</div><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> This remains a gated readiness window.</p><p><strong>Blocking reason:</strong> Need both expansion and animal readiness to remain aligned.</p><p><strong>Trigger condition:</strong> Only begin if both the expanded cell stock and the animal cohort are available on the same day.</p><p><strong>Next check:</strong> 2026-03-23 14:00</p></details></article></div><div class="calendar-cell" data-date="2026-03-24"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-25"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-26"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-27"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-28"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-29"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-30"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-31"><div class="cell-empty"></div></div></div></div><div class="gantt-row filter-row" data-stream="prep" data-count="0"><div class="gantt-stream"><strong>Preparation / Follow-up</strong><small>0 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-17"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-18"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-19"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-20"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-24"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-25"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-26"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-27"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-28"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-29"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-30"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-31"><div class="cell-empty"></div></div></div></div><div class="gantt-row filter-row" data-stream="general" data-count="0"><div class="gantt-stream"><strong>General</strong><small>0 blocks</small></div><div class="gantt-grid"><div class="calendar-cell" data-date="2026-03-17"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-18"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-19"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-20"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-21"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-22"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-23"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-24"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-25"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-26"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-27"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-28"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-29"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-30"><div class="cell-empty"></div></div><div class="calendar-cell" data-date="2026-03-31"><div class="cell-empty"></div></div></div></div></div></div></section>
+    <section class="panel today-panel" data-panel="today-plan"><div class="panel-head"><div><h2>Today Plan</h2><p>Monday, March 23, 2026</p></div><button class="panel-toggle" type="button">Collapse</button></div><div class="panel-body"><div class="today-meta"><div><span class="kicker">Focus</span><strong>No explicit focus set.</strong></div><div><span class="kicker">External commitments</span><div class="external-chip-wrap"><span class="muted">No competing calendar blocks.</span></div></div></div><div class="today-task-grid"><div class="empty-state">No tasks were mapped for today.</div></div></div></section>
     <section class="panel" data-panel="conditional-review"><div class="panel-head"><div><h2>Conditional Task Review</h2><p>Tasks that still need a decision, result, or prerequisite check.</p></div><button class="panel-toggle" type="button">Collapse</button></div><div class="panel-body"><div class="condition-grid"><article class="condition-card filter-item" data-stream="cell" data-status="conditional" data-title="if reporter culture is ready: expand to 20 flasks and seed spheroids the tuesday afternoon density check has not happened yet." data-date="2026-03-17"><div class="condition-meta"><span>Cell Expansion</span><span>03/17 Tue 15:00-16:00</span></div><h3>If reporter culture is ready: expand to 20 flasks and seed spheroids</h3><p class="condition-exp">Anchor Culture Expansion</p><p><strong>Trigger:</strong> Proceed only if all ten flasks reach the target density at the Tuesday afternoon check.</p><p><strong>State:</strong> Pending confirmation</p><p><strong>Blocker:</strong> The Tuesday afternoon density check has not happened yet.</p><p><strong>Next check:</strong> 2026-03-17 15:00</p></article><article class="condition-card filter-item" data-stream="spheroid" data-status="conditional" data-title="if spheroids are compact: embed in matrix need the day-2 morphology note first." data-date="2026-03-18"><div class="condition-meta"><span>3D Models</span><span>03/18 Wed 12:30-13:00</span></div><h3>If spheroids are compact: embed in matrix</h3><p class="condition-exp">3D Spheroid Pilot</p><p><strong>Trigger:</strong> Embed only if the spheroids are compact and stable during transfer.</p><p><strong>State:</strong> Pending confirmation</p><p><strong>Blocker:</strong> Need the day-2 morphology note first.</p><p><strong>Next check:</strong> 2026-03-18 12:30</p></article><article class="condition-card filter-item" data-stream="mouse" data-status="conditional" data-title="if cells and mice are ready: cohort start need both expansion and animal readiness to remain aligned." data-date="2026-03-23"><div class="condition-meta"><span>Animal Work</span><span>03/23 Mon 14:00-16:30</span></div><h3>If cells and mice are ready: cohort start</h3><p class="condition-exp">Cohort Readiness Window</p><p><strong>Trigger:</strong> Only begin if both the expanded cell stock and the animal cohort are available on the same day.</p><p><strong>State:</strong> Pending confirmation</p><p><strong>Blocker:</strong> Need both expansion and animal readiness to remain aligned.</p><p><strong>Next check:</strong> 2026-03-23 14:00</p></article></div></div></section>
-    <section class="panel" data-panel="experiment-timelines"><div class="panel-head"><div><h2>Experiment Timelines</h2><p>Cross-day workflows, decision points, and follow-up windows.</p></div><button class="panel-toggle" type="button">Collapse</button></div><div class="panel-body"><div class="experiment-grid"><article class="experiment-card filter-item" data-stream="cell" data-status="planned" data-title="anchor culture expansion expand the anchor culture, keep reporter cells healthy, and preserve a cohort-ready window."><div class="experiment-head"><span class="stream-pill">Cell Expansion</span><h3>Anchor Culture Expansion</h3></div><p class="experiment-goal">Expand the anchor culture, keep reporter cells healthy, and preserve a cohort-ready window.</p><div class="timeline-list"><article class="timeline-step filter-item" data-stream="cell" data-status="completed" data-title="passage anchor culture for expansion keep one flask as the anchor culture. estimate the next passage in about three days." data-date="2026-03-15"><div class="timeline-step-top"><span>03/15 Sun 15:30-16:15</span><span class="status-badge status-completed">Completed</span></div><h4>Passage anchor culture for expansion</h4><ul><li>Keep one flask as the anchor culture.</li><li>Estimate the next passage in about three days.</li></ul><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> One flask was retained as the anchor culture.</p></details></article><article class="timeline-step filter-item" data-stream="cell" data-status="partial" data-title="expand gfp reporter culture 5 flasks to 10 flasks record total cell count and average per flask. mark growth as slower than baseline if the post-thaw increase is modest." data-date="2026-03-15"><div class="timeline-step-top"><span>03/15 Sun 16:30-17:45</span><span class="status-badge status-partial">Partially Done</span></div><h4>Expand GFP reporter culture 5 flasks to 10 flasks</h4><ul><li>Record total cell count and average per flask.</li><li>Mark growth as slower than baseline if the post-thaw increase is modest.</li></ul><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> The culture expanded to ten flasks but growth remains slower than baseline after thaw.</p></details></article><article class="timeline-step filter-item" data-stream="cell" data-status="conditional" data-title="if reporter culture is ready: expand to 20 flasks and seed spheroids if density is still low, keep the conditional card active and push the downstream window." data-date="2026-03-17"><div class="timeline-step-top"><span>03/17 Tue 15:00-16:00</span><span class="status-badge status-conditional">Conditional</span></div><h4>If reporter culture is ready: expand to 20 flasks and seed spheroids</h4><p class="timeline-rule"><strong>Decision rule:</strong> Proceed only if all ten flasks reach the target density at the Tuesday afternoon check.</p><ul><li>If density is still low, keep the conditional card active and push the downstream window.</li></ul><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Reporter growth is slower than the baseline expansion model.</p><p><strong>Blocking reason:</strong> The Tuesday afternoon density check has not happened yet.</p><p><strong>Trigger condition:</strong> Proceed only if all ten flasks reach the target density at the Tuesday afternoon check.</p><p><strong>Next check:</strong> 2026-03-17 15:00</p></details></article></div></article><article class="experiment-card filter-item" data-stream="spheroid" data-status="planned" data-title="3d spheroid pilot seed a ten-well spheroid plate, monitor morphology, then embed compact spheroids in matrix."><div class="experiment-head"><span class="stream-pill">3D Models</span><h3>3D Spheroid Pilot</h3></div><p class="experiment-goal">Seed a ten-well spheroid plate, monitor morphology, then embed compact spheroids in matrix.</p><div class="timeline-list"><article class="timeline-step filter-item" data-stream="spheroid" data-status="completed" data-title="seed 3d spheroid plates use ten wells with the same starting density. capture the seed count in the lab notebook." data-date="2026-03-15"><div class="timeline-step-top"><span>03/15 Sun 13:30-14:30</span><span class="status-badge status-completed">Completed</span></div><h4>Seed 3D spheroid plates</h4><ul><li>Use ten wells with the same starting density.</li><li>Capture the seed count in the lab notebook.</li></ul><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Seeded ten wells with the same starting density.</p></details></article><article class="timeline-step filter-item" data-stream="spheroid" data-status="pending_sync" data-title="check spheroid morphology day 1 record whether aggregation is visible in all wells." data-date="2026-03-16"><div class="timeline-step-top"><span>03/16 Mon 15:00-15:20</span><span class="status-badge status-pending-sync">Pending Sync</span></div><h4>Check spheroid morphology day 1</h4><ul><li>Record whether aggregation is visible in all wells.</li></ul></article><article class="timeline-step filter-item" data-stream="spheroid" data-status="conditional" data-title="if spheroids are compact: embed in matrix if the morphology is weak, keep the plate in suspension and re-check the next day." data-date="2026-03-18"><div class="timeline-step-top"><span>03/18 Wed 12:30-13:00</span><span class="status-badge status-conditional">Conditional</span></div><h4>If spheroids are compact: embed in matrix</h4><p class="timeline-rule"><strong>Decision rule:</strong> Embed only if the spheroids are compact and easy to transfer without breaking.</p><ul><li>If the morphology is weak, keep the plate in suspension and re-check the next day.</li></ul><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Embedding depends on the day-2 morphology check.</p><p><strong>Blocking reason:</strong> Need the day-2 morphology note first.</p><p><strong>Trigger condition:</strong> Embed only if the spheroids are compact and stable during transfer.</p><p><strong>Next check:</strong> 2026-03-18 12:30</p></details></article></div></article><article class="experiment-card filter-item" data-stream="flow" data-status="planned" data-title="surface labeling and uptake assay run labeling and uptake readouts across multiple time points while tracking stability."><div class="experiment-head"><span class="stream-pill">Assays / Flow</span><h3>Surface Labeling and Uptake Assay</h3></div><p class="experiment-goal">Run labeling and uptake readouts across multiple time points while tracking stability.</p><div class="timeline-list"><article class="timeline-step filter-item" data-stream="flow" data-status="pending_sync" data-title="run 0h surface labeling flow panel run control, dye-only, and metabolically labeled groups." data-date="2026-03-16"><div class="timeline-step-top"><span>03/16 Mon 08:30-09:15</span><span class="status-badge status-pending-sync">Pending Sync</span></div><h4>Run 0h surface labeling flow panel</h4><ul><li>Run control, dye-only, and metabolically labeled groups.</li></ul></article><article class="timeline-step filter-item" data-stream="flow" data-status="planned" data-title="run 24h flow timepoint keep the same gating strategy for comparability." data-date="2026-03-17"><div class="timeline-step-top"><span>03/17 Tue 09:30-10:30</span><span class="status-badge status-planned">Planned</span></div><h4>Run 24h flow timepoint</h4><ul><li>Keep the same gating strategy for comparability.</li></ul></article><article class="timeline-step filter-item" data-stream="flow" data-status="planned" data-title="run 48h flow timepoint archive raw fcs files and note any drift." data-date="2026-03-20"><div class="timeline-step-top"><span>03/20 Fri 09:30-10:30</span><span class="status-badge status-planned">Planned</span></div><h4>Run 48h flow timepoint</h4><ul><li>Archive raw FCS files and note any drift.</li></ul></article></div></article><article class="experiment-card filter-item" data-stream="material" data-status="planned" data-title="material characterization follow-up complete sizing first, then return for zeta potential once the instrument slot opens."><div class="experiment-head"><span class="stream-pill">Material Characterization</span><h3>Material Characterization Follow-up</h3></div><p class="experiment-goal">Complete sizing first, then return for zeta potential once the instrument slot opens.</p><div class="timeline-list"><article class="timeline-step filter-item" data-stream="material" data-status="completed" data-title="dls readout capture count rate, diameter distribution, and batch identifier." data-date="2026-03-12"><div class="timeline-step-top"><span>03/12 Thu 13:30-14:30</span><span class="status-badge status-completed">Completed</span></div><h4>DLS readout</h4><ul><li>Capture count rate, diameter distribution, and batch identifier.</li></ul><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Sizing run completed with the matched sample batch.</p></details></article><article class="timeline-step filter-item" data-stream="material" data-status="planned" data-title="zeta potential measurement use the matched buffer condition from the dls batch." data-date="2026-03-19"><div class="timeline-step-top"><span>03/19 Thu 13:30-14:00</span><span class="status-badge status-planned">Planned</span></div><h4>Zeta potential measurement</h4><ul><li>Use the matched buffer condition from the DLS batch.</li></ul></article></div></article><article class="experiment-card filter-item" data-stream="mouse" data-status="planned" data-title="cohort readiness window keep the animal start dependent on both cell expansion and cohort availability."><div class="experiment-head"><span class="stream-pill">Animal Work</span><h3>Cohort Readiness Window</h3></div><p class="experiment-goal">Keep the animal start dependent on both cell expansion and cohort availability.</p><div class="timeline-list"><article class="timeline-step filter-item" data-stream="mouse" data-status="completed" data-title="confirm animal cohort arrival and cage assignment record cohort size, sex, and housing note." data-date="2026-03-16"><div class="timeline-step-top"><span>03/16 Mon 17:00-17:30</span><span class="status-badge status-completed">Completed</span></div><h4>Confirm animal cohort arrival and cage assignment</h4><ul><li>Record cohort size, sex, and housing note.</li></ul><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Twenty five-week-old male mice were confirmed in the facility.</p></details></article><article class="timeline-step filter-item" data-stream="mouse" data-status="conditional" data-title="if cells and mice are ready: cohort start use this as a gated readiness window rather than a hard promise." data-date="2026-03-23"><div class="timeline-step-top"><span>03/23 Mon 14:00-16:30</span><span class="status-badge status-conditional">Conditional</span></div><h4>If cells and mice are ready: cohort start</h4><p class="timeline-rule"><strong>Decision rule:</strong> Only begin if both the expanded cell stock and the animal cohort are available on the same day.</p><ul><li>Use this as a gated readiness window rather than a hard promise.</li></ul><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> This remains a gated readiness window.</p><p><strong>Blocking reason:</strong> Need both expansion and animal readiness to remain aligned.</p><p><strong>Trigger condition:</strong> Only begin if both the expanded cell stock and the animal cohort are available on the same day.</p><p><strong>Next check:</strong> 2026-03-23 14:00</p></details></article></div></article></div></div></section>
+    <section class="panel" data-panel="experiment-timelines"><div class="panel-head"><div><h2>Experiment Timelines</h2><p>Cross-day workflows, decision points, and follow-up windows.</p></div><button class="panel-toggle" type="button">Collapse</button></div><div class="panel-body"><div class="experiment-grid"><article class="experiment-card filter-item" data-stream="cell" data-status="planned" data-title="anchor culture expansion expand the anchor culture, keep reporter cells healthy, and preserve a cohort-ready window."><div class="experiment-head"><span class="stream-pill">Cell Expansion</span><h3>Anchor Culture Expansion</h3></div><p class="experiment-goal">Expand the anchor culture, keep reporter cells healthy, and preserve a cohort-ready window.</p><div class="timeline-list"><article class="timeline-step filter-item" data-stream="cell" data-status="planned" data-title="passage anchor culture for expansion keep one flask as the anchor culture. estimate the next passage in about three days." data-date="2026-03-15"><div class="timeline-step-top"><span>2026-03-15</span><span class="status-badge status-planned">Planned</span></div><h4>Passage anchor culture for expansion</h4><ul><li>Keep one flask as the anchor culture.</li><li>Estimate the next passage in about three days.</li></ul></article><article class="timeline-step filter-item" data-stream="cell" data-status="planned" data-title="expand gfp reporter culture 5 flasks to 10 flasks record total cell count and average per flask. mark growth as slower than baseline if the post-thaw increase is modest." data-date="2026-03-15"><div class="timeline-step-top"><span>2026-03-15</span><span class="status-badge status-planned">Planned</span></div><h4>Expand GFP reporter culture 5 flasks to 10 flasks</h4><ul><li>Record total cell count and average per flask.</li><li>Mark growth as slower than baseline if the post-thaw increase is modest.</li></ul></article><article class="timeline-step filter-item" data-stream="cell" data-status="conditional" data-title="if reporter culture is ready: expand to 20 flasks and seed spheroids if density is still low, keep the conditional card active and push the downstream window." data-date="2026-03-17"><div class="timeline-step-top"><span>03/17 Tue 15:00-16:00</span><span class="status-badge status-conditional">Conditional</span></div><h4>If reporter culture is ready: expand to 20 flasks and seed spheroids</h4><p class="timeline-rule"><strong>Decision rule:</strong> Proceed only if all ten flasks reach the target density at the Tuesday afternoon check.</p><ul><li>If density is still low, keep the conditional card active and push the downstream window.</li></ul><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Reporter growth is slower than the baseline expansion model.</p><p><strong>Blocking reason:</strong> The Tuesday afternoon density check has not happened yet.</p><p><strong>Trigger condition:</strong> Proceed only if all ten flasks reach the target density at the Tuesday afternoon check.</p><p><strong>Next check:</strong> 2026-03-17 15:00</p></details></article></div></article><article class="experiment-card filter-item" data-stream="spheroid" data-status="planned" data-title="3d spheroid pilot seed a ten-well spheroid plate, monitor morphology, then embed compact spheroids in matrix."><div class="experiment-head"><span class="stream-pill">3D Models</span><h3>3D Spheroid Pilot</h3></div><p class="experiment-goal">Seed a ten-well spheroid plate, monitor morphology, then embed compact spheroids in matrix.</p><div class="timeline-list"><article class="timeline-step filter-item" data-stream="spheroid" data-status="planned" data-title="seed 3d spheroid plates use ten wells with the same starting density. capture the seed count in the lab notebook." data-date="2026-03-15"><div class="timeline-step-top"><span>2026-03-15</span><span class="status-badge status-planned">Planned</span></div><h4>Seed 3D spheroid plates</h4><ul><li>Use ten wells with the same starting density.</li><li>Capture the seed count in the lab notebook.</li></ul></article><article class="timeline-step filter-item" data-stream="spheroid" data-status="planned" data-title="check spheroid morphology day 1 record whether aggregation is visible in all wells." data-date="2026-03-16"><div class="timeline-step-top"><span>2026-03-16</span><span class="status-badge status-planned">Planned</span></div><h4>Check spheroid morphology day 1</h4><ul><li>Record whether aggregation is visible in all wells.</li></ul></article><article class="timeline-step filter-item" data-stream="spheroid" data-status="conditional" data-title="if spheroids are compact: embed in matrix if the morphology is weak, keep the plate in suspension and re-check the next day." data-date="2026-03-18"><div class="timeline-step-top"><span>03/18 Wed 12:30-13:00</span><span class="status-badge status-conditional">Conditional</span></div><h4>If spheroids are compact: embed in matrix</h4><p class="timeline-rule"><strong>Decision rule:</strong> Embed only if the spheroids are compact and easy to transfer without breaking.</p><ul><li>If the morphology is weak, keep the plate in suspension and re-check the next day.</li></ul><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> Embedding depends on the day-2 morphology check.</p><p><strong>Blocking reason:</strong> Need the day-2 morphology note first.</p><p><strong>Trigger condition:</strong> Embed only if the spheroids are compact and stable during transfer.</p><p><strong>Next check:</strong> 2026-03-18 12:30</p></details></article></div></article><article class="experiment-card filter-item" data-stream="flow" data-status="planned" data-title="surface labeling and uptake assay run labeling and uptake readouts across multiple time points while tracking stability."><div class="experiment-head"><span class="stream-pill">Assays / Flow</span><h3>Surface Labeling and Uptake Assay</h3></div><p class="experiment-goal">Run labeling and uptake readouts across multiple time points while tracking stability.</p><div class="timeline-list"><article class="timeline-step filter-item" data-stream="flow" data-status="planned" data-title="run 0h surface labeling flow panel run control, dye-only, and metabolically labeled groups." data-date="2026-03-16"><div class="timeline-step-top"><span>2026-03-16</span><span class="status-badge status-planned">Planned</span></div><h4>Run 0h surface labeling flow panel</h4><ul><li>Run control, dye-only, and metabolically labeled groups.</li></ul></article><article class="timeline-step filter-item" data-stream="flow" data-status="unsynced" data-title="run 24h flow timepoint keep the same gating strategy for comparability." data-date="2026-03-17"><div class="timeline-step-top"><span>03/17 Tue 09:30-10:30</span><span class="status-badge status-unsynced">Unsynced</span></div><h4>Run 24h flow timepoint</h4><ul><li>Keep the same gating strategy for comparability.</li></ul></article><article class="timeline-step filter-item" data-stream="flow" data-status="unsynced" data-title="run 48h flow timepoint archive raw fcs files and note any drift." data-date="2026-03-20"><div class="timeline-step-top"><span>03/20 Fri 09:30-10:30</span><span class="status-badge status-unsynced">Unsynced</span></div><h4>Run 48h flow timepoint</h4><ul><li>Archive raw FCS files and note any drift.</li></ul></article></div></article><article class="experiment-card filter-item" data-stream="material" data-status="planned" data-title="material characterization follow-up complete sizing first, then return for zeta potential once the instrument slot opens."><div class="experiment-head"><span class="stream-pill">Material Characterization</span><h3>Material Characterization Follow-up</h3></div><p class="experiment-goal">Complete sizing first, then return for zeta potential once the instrument slot opens.</p><div class="timeline-list"><article class="timeline-step filter-item" data-stream="material" data-status="planned" data-title="dls readout capture count rate, diameter distribution, and batch identifier." data-date="2026-03-12"><div class="timeline-step-top"><span>2026-03-12</span><span class="status-badge status-planned">Planned</span></div><h4>DLS readout</h4><ul><li>Capture count rate, diameter distribution, and batch identifier.</li></ul></article><article class="timeline-step filter-item" data-stream="material" data-status="unsynced" data-title="zeta potential measurement use the matched buffer condition from the dls batch." data-date="2026-03-19"><div class="timeline-step-top"><span>03/19 Thu 13:30-14:00</span><span class="status-badge status-unsynced">Unsynced</span></div><h4>Zeta potential measurement</h4><ul><li>Use the matched buffer condition from the DLS batch.</li></ul></article></div></article><article class="experiment-card filter-item" data-stream="mouse" data-status="planned" data-title="cohort readiness window keep the animal start dependent on both cell expansion and cohort availability."><div class="experiment-head"><span class="stream-pill">Animal Work</span><h3>Cohort Readiness Window</h3></div><p class="experiment-goal">Keep the animal start dependent on both cell expansion and cohort availability.</p><div class="timeline-list"><article class="timeline-step filter-item" data-stream="mouse" data-status="planned" data-title="confirm animal cohort arrival and cage assignment record cohort size, sex, and housing note." data-date="2026-03-16"><div class="timeline-step-top"><span>2026-03-16</span><span class="status-badge status-planned">Planned</span></div><h4>Confirm animal cohort arrival and cage assignment</h4><ul><li>Record cohort size, sex, and housing note.</li></ul></article><article class="timeline-step filter-item" data-stream="mouse" data-status="conditional" data-title="if cells and mice are ready: cohort start use this as a gated readiness window rather than a hard promise." data-date="2026-03-23"><div class="timeline-step-top"><span>03/23 Mon 14:00-16:30</span><span class="status-badge status-conditional">Conditional</span></div><h4>If cells and mice are ready: cohort start</h4><p class="timeline-rule"><strong>Decision rule:</strong> Only begin if both the expanded cell stock and the animal cohort are available on the same day.</p><ul><li>Use this as a gated readiness window rather than a hard promise.</li></ul><details class="reason-details"><summary>Why this status?</summary><p><strong>Status note:</strong> This remains a gated readiness window.</p><p><strong>Blocking reason:</strong> Need both expansion and animal readiness to remain aligned.</p><p><strong>Trigger condition:</strong> Only begin if both the expanded cell stock and the animal cohort are available on the same day.</p><p><strong>Next check:</strong> 2026-03-23 14:00</p></details></article></div></article></div></div></section>
   </div>
   <script>
-    const todayIso = "2026-03-16";
+    const todayIso = "2026-03-23";
     const streamFilter = document.getElementById("stream-filter");
     const statusFilter = document.getElementById("status-filter");
     const searchFilter = document.getElementById("search-filter");
