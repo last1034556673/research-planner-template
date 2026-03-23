@@ -1,23 +1,138 @@
+"""Core data normalization and matching for plan details, status logs, and calendar events."""
+
 from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import json
 import re
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 
 SCHEMA_VERSION = 2
 HARD_TIMEPOINT_MARKERS = ("0h", "24h", "48h", "72h", "96h")
+
+DEFAULT_PRIMARY_CALENDAR = "Research"
+DEFAULT_IGNORE = frozenset({"Birthdays", "Holidays", "China Holidays", "Chinese Holidays"})
+
+GENERIC_CATEGORIZATION = (
+    ("mouse", ("mouse", "animal", "in vivo", "cohort", "tumor model", "小鼠", "动物")),
+    ("cell", ("cell", "culture", "passage", "seed", "confluence", "organoid", "传代", "细胞", "扩增")),
+    ("spheroid", ("3d", "spheroid", "organoid", "embed", "matrigel", "肿瘤球", "成球")),
+    ("flow", ("flow", "cytometry", "staining", "fitc", "cfse", "uptake", "assay", "流式")),
+    ("rna", ("rna", "analysis", "figure", "slides", "ppt", "summary", "results", "plot")),
+    ("material", ("dls", "zeta", "characterization", "particle", "material", "sizing", "表征")),
+    ("robot", ("motion", "microrobot", "pipeline", "navigation", "tracking", "运动", "机器人")),
+    ("prep", ("prepare", "booking", "order", "check", "review", "follow-up", "整理", "订购", "准备")),
+)
 
 
 def compact_text(text: str) -> str:
     return re.sub(r"\s+", " ", (text or "").strip())
 
 
+def compact_title(text: str) -> str:
+    """Strip bracket suffixes and leading non-word characters from event titles."""
+    text = re.sub(r"\s*\[[^\]]+\]\s*$", "", text).strip()
+    text = re.sub(r"^[^\w\u4e00-\u9fff]+", "", text).strip()
+    return text
+
+
 def compact_match_text(text: str) -> str:
     text = compact_text(text)
     return re.sub(r"[\s\[\]（）()【】:：,，.。+＋/_-]+", "", text).lower()
+
+
+def normalize_match_text(text: str) -> str:
+    """Normalize event title text for fuzzy matching."""
+    text = compact_title(text)
+    return re.sub(r"[\s\[\]（）()【】:：,，.。+＋/_-]+", "", text).lower()
+
+
+def score_event_match(text: str, event: dict[str, Any]) -> int:
+    """Score how well a text fragment matches an event title (0-100)."""
+    left = normalize_match_text(text)
+    right = normalize_match_text(event["title"])
+    if not left or not right:
+        return -1
+    if left == right:
+        return 100
+    if left in right or right in left:
+        return 80
+    left_tokens = set(re.findall(r"[\u4e00-\u9fffA-Za-z0-9]+", left))
+    right_tokens = set(re.findall(r"[\u4e00-\u9fffA-Za-z0-9]+", right))
+    return len(left_tokens & right_tokens) * 10
+
+
+def categorize(title: str) -> str:
+    """Classify an event title into a workstream based on keyword matching."""
+    title_lower = title.lower()
+    for stream_id, keywords in GENERIC_CATEGORIZATION:
+        if any(keyword in title_lower or keyword in title for keyword in keywords):
+            return stream_id
+    return "general"
+
+
+def is_conditional(title: str) -> bool:
+    """Check whether an event title indicates a conditional/gated task."""
+    markers = ("if ", "when ", "once ", "after confirmation", "if confluence", "若", "待确认", "条件")
+    title_lower = title.lower()
+    return any(marker in title_lower or marker in title for marker in markers)
+
+
+def parse_event(record: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:
+    """Transform a raw calendar event record into a normalized parsed event dict."""
+    start = dt.datetime.fromisoformat(record["start"]).astimezone(tz)
+    end = dt.datetime.fromisoformat(record["end"]).astimezone(tz)
+    title = record["title"]
+    return {
+        "id": f"{record.get('calendar', '')}|{start.isoformat()}|{title}",
+        "calendar": record.get("calendar", DEFAULT_PRIMARY_CALENDAR),
+        "event_id": record.get("event_id"),
+        "task_id": record.get("task_id"),
+        "title": title,
+        "short_title": compact_title(title),
+        "start": start,
+        "end": end,
+        "is_all_day": bool(record.get("isAllDay", False)),
+        "stream": record.get("stream") or categorize(title),
+        "display_streams": list(dict.fromkeys(record.get("display_streams", []) or [record.get("stream") or categorize(title)])),
+        "conditional": bool(record.get("conditional")) or is_conditional(title),
+        "aliases": list(dict.fromkeys(record.get("aliases", []) or [title])),
+    }
+
+
+def best_event_match(
+    text: str,
+    events: list[dict[str, Any]],
+    reference_date: dt.date | None = None,
+) -> dict[str, Any] | None:
+    """Find the best-matching event for a text fragment, returning None if below threshold."""
+    if not events:
+        return None
+    if reference_date is not None:
+        ranked = sorted(
+            events,
+            key=lambda item: (score_event_match(text, item), -abs((item["start"].date() - reference_date).days)),
+            reverse=True,
+        )
+    else:
+        ranked = sorted(
+            events,
+            key=lambda item: (score_event_match(text, item), item["start"]),
+            reverse=True,
+        )
+    return ranked[0] if score_event_match(text, ranked[0]) >= 60 else None
+
+
+def load_status_log(path: Path) -> dict[str, Any]:
+    """Load and normalize a status log from a JSON file, returning empty log if missing."""
+    if not path.exists():
+        return normalize_status_log({"statuses": []})
+    return normalize_status_log(json.loads(path.read_text(encoding="utf-8")))
 
 
 def normalize_aliases(value: Any) -> list[str]:

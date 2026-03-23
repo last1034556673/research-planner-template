@@ -9,22 +9,34 @@ import datetime as dt
 import html
 import json
 from pathlib import Path
-import re
 from typing import Any
 from zoneinfo import ZoneInfo
 
 from .calendar_io import load_event_records
-from .planner_data import event_matches_status_entry, normalize_calendar_events, normalize_plan_details, normalize_status_log
+from .planner_data import (
+    DEFAULT_IGNORE,
+    DEFAULT_PRIMARY_CALENDAR,
+    best_event_match,
+    categorize,
+    compact_title,
+    event_matches_status_entry,
+    is_conditional,
+    load_status_log,
+    normalize_calendar_events,
+    normalize_plan_details,
+    normalize_status_log,
+    parse_event,
+    score_event_match,
+)
+from .templates import load_css
 
 
 DEFAULT_OUTPUT = "future_experiment_schedule.html"
-DEFAULT_PRIMARY_CALENDAR = "Research"
 DEFAULT_DETAILS_FILE = "plan_details.json"
 DEFAULT_STATUS_FILE = "status_log.json"
-DEFAULT_IGNORE = {"Birthdays", "Holidays", "China Holidays", "Chinese Holidays"}
 DISPLAY_EXCLUDE_KEYWORDS = ("Lunch Break", "午餐", "break", "Focus Block")
 WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-SYNC_DEADLINE = dt.time(9, 30)
+DEFAULT_SYNC_DEADLINE = dt.time(9, 30)
 
 DEFAULT_STREAMS = [
     {"id": "rna", "label": "Analysis / Slides"},
@@ -48,17 +60,6 @@ STATUS_META = {
     "conditional": {"label": "Conditional", "class": "status-conditional"},
     "planned": {"label": "Planned", "class": "status-planned"},
 }
-
-GENERIC_CATEGORIZATION = (
-    ("mouse", ("mouse", "animal", "in vivo", "cohort", "tumor model", "小鼠", "动物")),
-    ("cell", ("cell", "culture", "passage", "seed", "confluence", "organoid", "传代", "细胞", "扩增")),
-    ("spheroid", ("3d", "spheroid", "organoid", "embed", "matrigel", "肿瘤球", "成球")),
-    ("flow", ("flow", "cytometry", "staining", "fitc", "cfse", "uptake", "assay", "流式")),
-    ("rna", ("rna", "analysis", "figure", "slides", "ppt", "summary", "results", "plot")),
-    ("material", ("dls", "zeta", "characterization", "particle", "material", "sizing", "表征")),
-    ("robot", ("motion", "microrobot", "pipeline", "navigation", "tracking", "运动", "机器人")),
-    ("prep", ("prepare", "booking", "order", "check", "review", "follow-up", "整理", "订购", "准备")),
-)
 
 
 def parse_args() -> argparse.Namespace:
@@ -85,22 +86,15 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def set_sync_deadline(value: str) -> None:
-    global SYNC_DEADLINE
+def parse_sync_deadline(value: str) -> dt.time:
     hours_text, minutes_text = value.split(":", 1)
-    SYNC_DEADLINE = dt.time(int(hours_text), int(minutes_text))
+    return dt.time(int(hours_text), int(minutes_text))
 
 
 def load_plan_details(path: Path) -> dict[str, Any]:
     if not path.exists():
         return normalize_plan_details({"streams": DEFAULT_STREAMS, "experiments": [], "days": []})
     return normalize_plan_details(json.loads(path.read_text(encoding="utf-8")))
-
-
-def load_status_log(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return normalize_status_log({"statuses": []})
-    return normalize_status_log(json.loads(path.read_text(encoding="utf-8")))
 
 
 def merged_streams(plan: dict[str, Any], extra_streams: list[dict[str, Any]] | None = None) -> list[dict[str, str]]:
@@ -119,26 +113,6 @@ def merged_streams(plan: dict[str, Any], extra_streams: list[dict[str, Any]] | N
     return ordered
 
 
-def categorize(title: str) -> str:
-    title_lower = title.lower()
-    for stream_id, keywords in GENERIC_CATEGORIZATION:
-        if any(keyword in title_lower or keyword in title for keyword in keywords):
-            return stream_id
-    return "general"
-
-
-def is_conditional(title: str) -> bool:
-    markers = ("if ", "when ", "once ", "after confirmation", "if confluence", "若", "待确认", "条件")
-    title_lower = title.lower()
-    return any(marker in title_lower or marker in title for marker in markers)
-
-
-def compact_title(title: str) -> str:
-    title = re.sub(r"\s*\[[^\]]+\]\s*$", "", title).strip()
-    title = re.sub(r"^[^\w\u4e00-\u9fff]+", "", title).strip()
-    return title
-
-
 def clip_text(text: str, limit: int = 40) -> str:
     if len(text) <= limit:
         return text
@@ -150,56 +124,9 @@ def weekday_label(value: dt.date | dt.datetime) -> str:
     return WEEKDAY_LABELS[date_value.weekday()]
 
 
-def parse_event(record: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:
-    start = dt.datetime.fromisoformat(record["start"]).astimezone(tz)
-    end = dt.datetime.fromisoformat(record["end"]).astimezone(tz)
-    title = record["title"]
-    return {
-        "id": f"{record.get('calendar', '')}|{start.isoformat()}|{title}",
-        "calendar": record.get("calendar", DEFAULT_PRIMARY_CALENDAR),
-        "event_id": record.get("event_id"),
-        "task_id": record.get("task_id"),
-        "title": title,
-        "short_title": compact_title(title),
-        "start": start,
-        "end": end,
-        "is_all_day": bool(record.get("isAllDay", False)),
-        "stream": record.get("stream") or categorize(title),
-        "display_streams": list(dict.fromkeys(record.get("display_streams", []) or [record.get("stream") or categorize(title)])),
-        "conditional": bool(record.get("conditional")) or is_conditional(title),
-        "aliases": list(dict.fromkeys(record.get("aliases", []) or [title])),
-    }
-
-
 def visible_primary(event: dict[str, Any]) -> bool:
     title_lower = event["title"].lower()
     return not any(keyword.lower() in title_lower for keyword in DISPLAY_EXCLUDE_KEYWORDS)
-
-
-def normalize_match_text(text: str) -> str:
-    text = compact_title(text)
-    return re.sub(r"[\s\[\]（）()【】:：,，.。+＋/_-]+", "", text).lower()
-
-
-def score_event_match(text: str, event: dict[str, Any]) -> int:
-    left = normalize_match_text(text)
-    right = normalize_match_text(event["title"])
-    if not left or not right:
-        return -1
-    if left == right:
-        return 100
-    if left in right or right in left:
-        return 80
-    left_tokens = set(re.findall(r"[\u4e00-\u9fffA-Za-z0-9]+", left))
-    right_tokens = set(re.findall(r"[\u4e00-\u9fffA-Za-z0-9]+", right))
-    return len(left_tokens & right_tokens) * 10
-
-
-def best_event_match(text: str, events: list[dict[str, Any]]) -> dict[str, Any] | None:
-    ranked = sorted(events, key=lambda item: (score_event_match(text, item), item["start"]), reverse=True)
-    if not ranked:
-        return None
-    return ranked[0] if score_event_match(text, ranked[0]) >= 60 else None
 
 
 def match_status_entry(event: dict[str, Any], entries: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -209,7 +136,12 @@ def match_status_entry(event: dict[str, Any], entries: list[dict[str, Any]]) -> 
     return None
 
 
-def annotate_event_status(event: dict[str, Any], status_entries: list[dict[str, Any]], now: dt.datetime) -> dict[str, Any]:
+def annotate_event_status(
+    event: dict[str, Any],
+    status_entries: list[dict[str, Any]],
+    now: dt.datetime,
+    sync_deadline: dt.time | None = None,
+) -> dict[str, Any]:
     entry = match_status_entry(event, status_entries)
     note = ""
     status_key = None
@@ -227,12 +159,13 @@ def annotate_event_status(event: dict[str, Any], status_entries: list[dict[str, 
 
     if not status_key:
         if event["end"] < now:
-            sync_deadline = dt.datetime.combine(
+            effective_deadline = sync_deadline or DEFAULT_SYNC_DEADLINE
+            deadline_dt = dt.datetime.combine(
                 event["start"].date() + dt.timedelta(days=1),
-                SYNC_DEADLINE,
+                effective_deadline,
                 tzinfo=event["start"].tzinfo,
             )
-            status_key = "pending_sync" if now < sync_deadline else "unsynced"
+            status_key = "pending_sync" if now < deadline_dt else "unsynced"
         elif event["conditional"]:
             status_key = "conditional"
         else:
@@ -337,7 +270,9 @@ def collect_window_events(
     window_end: dt.datetime,
     status_entries: list[dict[str, Any]],
     include_past: bool,
+    sync_deadline: dt.time | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dt.datetime]:
+    """Load, parse, and annotate events for the dashboard window, splitting primary vs external."""
     now = dt.datetime.now(dt.timezone.utc).astimezone(tz)
     raw_records = load_event_records(
         start=window_start,
@@ -356,7 +291,7 @@ def collect_window_events(
             continue
         if not include_past and event["end"] < now:
             continue
-        event = annotate_event_status(event, status_entries, now)
+        event = annotate_event_status(event, status_entries, now, sync_deadline=sync_deadline)
         if event["calendar"] == calendar:
             primary.append(event)
         else:
@@ -383,6 +318,7 @@ def collect_today_context(
     plan: dict[str, Any],
     stream_map: dict[str, dict[str, str]],
 ) -> dict[str, Any]:
+    """Build the today-focused context dict with tasks, events, and plan details for rendering."""
     today_key = today.isoformat()
     plan_day = next((day for day in plan.get("days", []) if day.get("date") == today_key), None)
     primary_events = primary_by_day.get(today_key, [])
@@ -509,6 +445,7 @@ def render_reason_details(
 
 
 def render_gantt(primary_events: list[dict[str, Any]], streams: list[dict[str, str]], days: list[dt.date]) -> str:
+    """Render the Gantt-style window overview grid with events grouped by stream and date."""
     stream_map = {item["id"]: item["label"] for item in streams}
     grouped: dict[str, dict[str, list[dict[str, Any]]]] = defaultdict(lambda: defaultdict(list))
     for event in primary_events:
@@ -571,6 +508,7 @@ def render_gantt(primary_events: list[dict[str, Any]], streams: list[dict[str, s
 
 
 def render_today_plan(today_context: dict[str, Any], today: dt.date) -> str:
+    """Render the Today's Plan panel with task cards and external calendar events."""
     plan_day = today_context["plan_day"]
     tasks = today_context["tasks"]
     external_events = today_context["external_events"]
@@ -661,6 +599,7 @@ def render_conditional_panel(items: list[dict[str, Any]]) -> str:
 
 
 def render_experiment_timelines(plan: dict[str, Any], events: list[dict[str, Any]], stream_map: dict[str, dict[str, str]]) -> str:
+    """Render the experiment timelines panel showing multi-step workflows."""
     if not plan.get("experiments"):
         return (
             "<section class=\"panel\" data-panel=\"experiment-timelines\">"
@@ -712,19 +651,8 @@ def render_experiment_timelines(plan: dict[str, Any], events: list[dict[str, Any
     )
 
 
-def render_html(
-    *,
-    project_name: str,
-    days: list[dt.date],
-    streams: list[dict[str, str]],
-    primary_events: list[dict[str, Any]],
-    external_events: list[dict[str, Any]],
-    plan: dict[str, Any],
-    today_context: dict[str, Any],
-    conditional_items: list[dict[str, Any]],
-) -> str:
-    stream_map = {item["id"]: item for item in streams}
-    counts = collect_status_counts(primary_events)
+def render_filter_controls(streams: list[dict[str, str]]) -> str:
+    """Render the stream/status/search filter controls panel."""
     stream_options = "".join(
         f"<option value=\"{html.escape(item['id'])}\">{html.escape(item['label'])}</option>"
         for item in streams
@@ -733,517 +661,25 @@ def render_html(
         f"<option value=\"{html.escape(key)}\">{html.escape(meta['label'])}</option>"
         for key, meta in STATUS_META.items()
     )
-    legend = "".join(
-        f"<span class=\"legend-chip\"><i class=\"legend-dot {meta['class']}\"></i>{html.escape(meta['label'])}</span>"
-        for meta in STATUS_META.values()
+    return (
+        "<section class=\"panel controls-panel\">"
+        "<div class=\"control\"><label for=\"stream-filter\">Stream</label>"
+        f"<select id=\"stream-filter\"><option value=\"\">All streams</option>{stream_options}</select></div>"
+        "<div class=\"control\"><label for=\"status-filter\">Status</label>"
+        f"<select id=\"status-filter\"><option value=\"\">All statuses</option>{status_options}</select></div>"
+        "<div class=\"control\"><label for=\"search-filter\">Search</label>"
+        "<input id=\"search-filter\" type=\"search\" placeholder=\"Title, blocker, note\"></div>"
+        "<div class=\"control toggle-row\">"
+        "<label><input id=\"hide-empty-streams\" type=\"checkbox\"> Hide empty streams</label>"
+        "<label><input id=\"today-only\" type=\"checkbox\"> Today only</label>"
+        "</div></section>"
     )
-    hero_range = f"{days[0]:%b %d} - {days[-1]:%b %d, %Y}"
-    today = today_context["primary_events"][0]["start"].date() if today_context["primary_events"] else dt.datetime.now().date()
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{html.escape(project_name)} Planner</title>
-  <style>
-    :root {{
-      --bg: #f4efe8;
-      --paper: #fffdfa;
-      --ink: #2d241f;
-      --muted: #766960;
-      --line: #e8ddd0;
-      --shadow: 0 18px 45px rgba(86, 58, 37, 0.08);
-      --radius: 28px;
-      --rna: #c95e49;
-      --cell: #1b8a83;
-      --spheroid: #6469d8;
-      --flow: #ee934d;
-      --material: #2d6fab;
-      --robot: #2e9b7d;
-      --mouse: #9c4e44;
-      --prep: #967321;
-      --general: #67727e;
-      --done: #17664f;
-      --partial: #845b19;
-      --moved: #8a6d61;
-      --incomplete: #9e3f39;
-      --pending: #7a5d2a;
-      --unsynced: #8a4c4c;
-      --conditional: #5a55b8;
-      --planned: #5f6d7a;
-    }}
-    * {{ box-sizing: border-box; }}
-    body {{
-      margin: 0;
-      background:
-        radial-gradient(circle at top left, rgba(242, 186, 138, 0.26), transparent 32%),
-        linear-gradient(180deg, #f8f4ee 0%, var(--bg) 100%);
-      color: var(--ink);
-      font-family: "Avenir Next", "Segoe UI", sans-serif;
-    }}
-    .shell {{ max-width: 1580px; margin: 0 auto; padding: 28px; }}
-    .hero {{
-      background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(255,247,239,0.92));
-      border: 1px solid rgba(146, 106, 77, 0.12);
-      box-shadow: var(--shadow);
-      border-radius: 34px;
-      padding: 28px 30px;
-      display: grid;
-      gap: 22px;
-    }}
-    .hero h1 {{ margin: 0; font-size: 44px; line-height: 1.05; }}
-    .hero p {{ margin: 0; color: var(--muted); }}
-    .hero-top {{
-      display: flex;
-      justify-content: space-between;
-      gap: 20px;
-      align-items: flex-start;
-      flex-wrap: wrap;
-    }}
-    .hero-stats {{
-      display: grid;
-      grid-template-columns: repeat(4, minmax(150px, 1fr));
-      gap: 14px;
-      width: 100%;
-    }}
-    .stat-card {{
-      background: var(--paper);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 16px 18px;
-    }}
-    .stat-card span {{
-      display: block;
-      font-size: 12px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }}
-    .stat-card strong {{ font-size: 28px; }}
-    .legend-bar {{
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px 12px;
-      align-items: center;
-    }}
-    .legend-chip {{
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255,255,255,0.72);
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 8px 12px;
-      color: var(--muted);
-      font-size: 13px;
-    }}
-    .legend-dot {{
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-    }}
-    .panel {{
-      margin-top: 22px;
-      background: rgba(255,253,250,0.95);
-      border: 1px solid rgba(146, 106, 77, 0.12);
-      box-shadow: var(--shadow);
-      border-radius: var(--radius);
-      padding: 24px;
-    }}
-    .panel-head {{
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: end;
-      flex-wrap: wrap;
-      margin-bottom: 18px;
-    }}
-    .panel-head h2 {{ margin: 0; font-size: 30px; }}
-    .panel-head p {{ margin: 0; color: var(--muted); }}
-    .panel-toggle {{
-      border: 1px solid var(--line);
-      background: #f8f1e9;
-      border-radius: 999px;
-      color: var(--ink);
-      padding: 8px 14px;
-      font: inherit;
-      cursor: pointer;
-    }}
-    .panel.collapsed .panel-body {{ display: none; }}
-    .controls-panel {{
-      margin-top: 22px;
-      display: grid;
-      gap: 14px;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      align-items: end;
-    }}
-    .control {{
-      display: grid;
-      gap: 8px;
-    }}
-    .control label {{
-      color: var(--muted);
-      font-size: 12px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }}
-    .control input, .control select {{
-      width: 100%;
-      padding: 11px 12px;
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.92);
-      font: inherit;
-      color: var(--ink);
-    }}
-    .toggle-row {{
-      display: flex;
-      gap: 14px;
-      flex-wrap: wrap;
-      align-items: center;
-      padding-bottom: 4px;
-    }}
-    .toggle-row label {{
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 14px;
-      letter-spacing: normal;
-      text-transform: none;
-    }}
-    .gantt-shell {{
-      overflow-x: auto;
-      border-top: 1px solid var(--line);
-      padding-top: 14px;
-    }}
-    .gantt-row {{
-      display: grid;
-      grid-template-columns: 280px minmax(900px, 1fr);
-      gap: 14px;
-      align-items: start;
-      margin-bottom: 12px;
-    }}
-    .gantt-row-head {{
-      position: sticky;
-      top: 0;
-      background: rgba(255, 253, 250, 0.92);
-      z-index: 2;
-      padding-bottom: 8px;
-    }}
-    .gantt-stream {{
-      padding: 14px 12px;
-      border-radius: 18px;
-      background: rgba(250, 243, 235, 0.95);
-      border: 1px solid var(--line);
-      min-height: 100%;
-    }}
-    .gantt-stream strong {{
-      display: block;
-      font-size: 15px;
-      margin-bottom: 6px;
-    }}
-    .gantt-stream small {{
-      color: var(--muted);
-      font-size: 13px;
-    }}
-    .gantt-stream-head {{
-      font-size: 13px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }}
-    .gantt-grid {{
-      display: grid;
-      grid-template-columns: repeat({len(days)}, minmax(120px, 1fr));
-      gap: 10px;
-    }}
-    .calendar-cell {{
-      min-height: 112px;
-      border-radius: 18px;
-      padding: 10px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(250,244,238,0.9));
-      border: 1px solid var(--line);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }}
-    .calendar-head {{
-      min-height: auto;
-      background: #f7f0e8;
-      justify-content: center;
-      align-items: start;
-      font-weight: 700;
-    }}
-    .calendar-head small {{
-      color: var(--muted);
-      font-weight: 500;
-    }}
-    .cell-empty {{
-      flex: 1;
-      border: 1px dashed rgba(145, 120, 103, 0.25);
-      border-radius: 14px;
-      min-height: 42px;
-      background: rgba(255,255,255,0.5);
-    }}
-    .gantt-card {{
-      color: white;
-      border-radius: 16px;
-      padding: 10px 12px;
-      box-shadow: 0 12px 22px rgba(51, 34, 22, 0.12);
-      border: 1px solid rgba(255,255,255,0.12);
-      background: var(--general);
-    }}
-    .filter-hidden {{ display: none !important; }}
-    .gantt-card.status-moved,
-    .legend-dot.status-moved {{ background: var(--moved); }}
-    .gantt-card.status-completed,
-    .legend-dot.status-completed {{ background: var(--done); }}
-    .gantt-card.status-partial,
-    .legend-dot.status-partial {{ background: var(--partial); }}
-    .gantt-card.status-incomplete,
-    .legend-dot.status-incomplete {{ background: var(--incomplete); }}
-    .gantt-card.status-pending-sync,
-    .legend-dot.status-pending-sync {{ background: var(--pending); }}
-    .gantt-card.status-unsynced,
-    .legend-dot.status-unsynced {{ background: var(--unsynced); }}
-    .gantt-card.status-conditional,
-    .legend-dot.status-conditional {{ background: var(--conditional); }}
-    .gantt-card.status-planned,
-    .legend-dot.status-planned {{ background: var(--planned); }}
-    .gantt-conditional {{
-      outline: 2px dashed rgba(255,255,255,0.7);
-      outline-offset: -6px;
-    }}
-    .gantt-time {{
-      font-size: 12px;
-      opacity: 0.9;
-      margin-bottom: 6px;
-    }}
-    .gantt-title {{
-      font-size: 15px;
-      font-weight: 700;
-      line-height: 1.2;
-    }}
-    .gantt-state {{
-      margin-top: 8px;
-      font-size: 12px;
-      opacity: 0.95;
-    }}
-    .today-meta {{
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 16px;
-    }}
-    .kicker {{
-      display: block;
-      color: var(--muted);
-      font-size: 12px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }}
-    .external-chip-wrap {{
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }}
-    .external-chip {{
-      display: inline-flex;
-      align-items: center;
-      padding: 7px 10px;
-      border-radius: 999px;
-      background: #f3ebdf;
-      border: 1px solid var(--line);
-      color: var(--muted);
-      font-size: 13px;
-    }}
-    .focus-notes {{
-      margin: 0 0 18px;
-      color: var(--muted);
-      padding-left: 18px;
-    }}
-    .today-task-grid, .condition-grid, .experiment-grid {{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 14px;
-    }}
-    .today-task, .condition-card, .experiment-card {{
-      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(249,243,237,0.9));
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 18px;
-    }}
-    .today-task-top, .timeline-step-top, .condition-meta {{
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-    }}
-    .task-time, .condition-meta, .timeline-step-top {{
-      color: var(--muted);
-      font-size: 13px;
-    }}
-    .today-task h3, .condition-card h3, .experiment-card h3 {{
-      margin: 0 0 8px;
-      font-size: 22px;
-      line-height: 1.15;
-    }}
-    .task-stream, .condition-exp, .experiment-goal {{
-      margin: 0 0 12px;
-      color: var(--muted);
-    }}
-    .task-deliverable, .task-condition, .timeline-rule, .condition-card p {{
-      margin: 8px 0;
-    }}
-    .status-badge {{
-      display: inline-flex;
-      align-items: center;
-      padding: 7px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-      color: white;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-    }}
-    .status-completed {{ background: var(--done); }}
-    .status-partial {{ background: var(--partial); }}
-    .status-moved {{ background: var(--moved); }}
-    .status-incomplete {{ background: var(--incomplete); }}
-    .status-pending-sync {{ background: var(--pending); }}
-    .status-unsynced {{ background: var(--unsynced); }}
-    .status-conditional {{ background: var(--conditional); }}
-    .status-planned {{ background: var(--planned); }}
-    .stream-pill {{
-      display: inline-flex;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: #f4ebdf;
-      border: 1px solid var(--line);
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }}
-    .experiment-head {{
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 10px;
-    }}
-    .timeline-list {{
-      display: grid;
-      gap: 10px;
-    }}
-    .timeline-step {{
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 14px;
-      background: rgba(255,255,255,0.7);
-    }}
-    .timeline-step h4 {{
-      margin: 0;
-      font-size: 18px;
-    }}
-    .reason-details {{
-      margin-top: 10px;
-      border-top: 1px dashed rgba(145, 120, 103, 0.35);
-      padding-top: 10px;
-      color: var(--muted);
-    }}
-    .reason-details summary {{
-      cursor: pointer;
-      color: var(--ink);
-      font-weight: 600;
-      margin-bottom: 8px;
-    }}
-    .reason-details p {{ margin: 8px 0; }}
-    .history-link {{
-      margin: 12px 0 0;
-      font-size: 13px;
-    }}
-    .history-link a {{
-      color: var(--mouse);
-      text-decoration: none;
-      font-weight: 600;
-    }}
-    .empty-state {{
-      padding: 22px;
-      border-radius: 18px;
-      border: 1px dashed rgba(135, 104, 82, 0.35);
-      color: var(--muted);
-      background: rgba(255,255,255,0.62);
-    }}
-    .muted {{ color: var(--muted); }}
-    @media (max-width: 1080px) {{
-      .hero-stats, .today-meta {{ grid-template-columns: 1fr 1fr; }}
-      .gantt-row {{ grid-template-columns: 220px minmax(780px, 1fr); }}
-    }}
-    @media (max-width: 720px) {{
-      .shell {{ padding: 16px; }}
-      .hero h1 {{ font-size: 34px; }}
-      .hero-stats, .today-meta {{ grid-template-columns: 1fr; }}
-      .panel {{ padding: 18px; }}
-      .gantt-row {{ grid-template-columns: 180px minmax(720px, 1fr); }}
-    }}
-  </style>
-</head>
-<body>
-  <div class="shell">
-    <section class="hero">
-      <div class="hero-top">
-        <div>
-          <p class="kicker">Research Planner Template</p>
-          <h1>{html.escape(project_name)}</h1>
-          <p>{html.escape(hero_range)}. Short window for execution, review, and rolling replanning.</p>
-        </div>
-        <div class="legend-bar">{legend}</div>
-      </div>
-      <div class="hero-stats">
-        <article class="stat-card"><span>Completed / Partial</span><strong>{counts['completed'] + counts['partial']}</strong></article>
-        <article class="stat-card"><span>Moved / Incomplete</span><strong>{counts['moved'] + counts['incomplete']}</strong></article>
-        <article class="stat-card"><span>Conditional</span><strong>{counts['conditional']}</strong></article>
-        <article class="stat-card"><span>Pending Sync</span><strong>{counts['pending_sync'] + counts['unsynced']}</strong></article>
-      </div>
-    </section>
-    <section class="panel controls-panel">
-      <div class="control">
-        <label for="stream-filter">Stream</label>
-        <select id="stream-filter">
-          <option value="">All streams</option>
-          {stream_options}
-        </select>
-      </div>
-      <div class="control">
-        <label for="status-filter">Status</label>
-        <select id="status-filter">
-          <option value="">All statuses</option>
-          {status_options}
-        </select>
-      </div>
-      <div class="control">
-        <label for="search-filter">Search</label>
-        <input id="search-filter" type="search" placeholder="Title, blocker, note">
-      </div>
-      <div class="control toggle-row">
-        <label><input id="hide-empty-streams" type="checkbox"> Hide empty streams</label>
-        <label><input id="today-only" type="checkbox"> Today only</label>
-      </div>
-    </section>
-    {render_gantt(primary_events, streams, days)}
-    {render_today_plan(today_context, today)}
-    {render_conditional_panel(conditional_items)}
-    {render_experiment_timelines(plan, primary_events, stream_map)}
-  </div>
-  <script>
-    const todayIso = "{today.isoformat()}";
+
+
+def render_filter_script(today_iso: str) -> str:
+    """Render the client-side JavaScript for interactive filtering."""
+    return f"""<script>
+    const todayIso = "{today_iso}";
     const streamFilter = document.getElementById("stream-filter");
     const statusFilter = document.getElementById("status-filter");
     const searchFilter = document.getElementById("search-filter");
@@ -1293,14 +729,74 @@ def render_html(
       }});
     }});
     applyFilters();
-  </script>
+  </script>"""
+
+
+def render_html(
+    *,
+    project_name: str,
+    days: list[dt.date],
+    streams: list[dict[str, str]],
+    primary_events: list[dict[str, Any]],
+    external_events: list[dict[str, Any]],
+    plan: dict[str, Any],
+    today_context: dict[str, Any],
+    conditional_items: list[dict[str, Any]],
+) -> str:
+    """Assemble the full dashboard HTML document from rendered sections."""
+    stream_map = {item["id"]: item for item in streams}
+    counts = collect_status_counts(primary_events)
+    legend = "".join(
+        f"<span class=\"legend-chip\"><i class=\"legend-dot {meta['class']}\"></i>{html.escape(meta['label'])}</span>"
+        for meta in STATUS_META.values()
+    )
+    hero_range = f"{days[0]:%b %d} - {days[-1]:%b %d, %Y}"
+    today = today_context["primary_events"][0]["start"].date() if today_context["primary_events"] else dt.datetime.now().date()
+    css = load_css("dashboard.css")
+    gantt_columns_css = f".gantt-grid {{ grid-template-columns: repeat({len(days)}, minmax(120px, 1fr)); }}"
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{html.escape(project_name)} Planner</title>
+  <style>
+    {css}
+    {gantt_columns_css}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <p class="kicker">Research Planner Template</p>
+          <h1>{html.escape(project_name)}</h1>
+          <p>{html.escape(hero_range)}. Short window for execution, review, and rolling replanning.</p>
+        </div>
+        <div class="legend-bar">{legend}</div>
+      </div>
+      <div class="hero-stats">
+        <article class="stat-card"><span>Completed / Partial</span><strong>{counts['completed'] + counts['partial']}</strong></article>
+        <article class="stat-card"><span>Moved / Incomplete</span><strong>{counts['moved'] + counts['incomplete']}</strong></article>
+        <article class="stat-card"><span>Conditional</span><strong>{counts['conditional']}</strong></article>
+        <article class="stat-card"><span>Pending Sync</span><strong>{counts['pending_sync'] + counts['unsynced']}</strong></article>
+      </div>
+    </section>
+    {render_filter_controls(streams)}
+    {render_gantt(primary_events, streams, days)}
+    {render_today_plan(today_context, today)}
+    {render_conditional_panel(conditional_items)}
+    {render_experiment_timelines(plan, primary_events, stream_map)}
+  </div>
+  {render_filter_script(today.isoformat())}
 </body>
 </html>"""
 
 
 def main() -> int:
     args = parse_args()
-    set_sync_deadline(args.sync_deadline)
+    sync_deadline = parse_sync_deadline(args.sync_deadline)
     tz = ZoneInfo(args.time_zone)
     start_date = dt.date.fromisoformat(args.start_date)
     days = [start_date + dt.timedelta(days=offset) for offset in range(args.days)]
@@ -1323,6 +819,7 @@ def main() -> int:
         window_end=window_end,
         status_entries=status_log.get("statuses", []),
         include_past=args.include_past,
+        sync_deadline=sync_deadline,
     )
     enrich_events_with_plan_links(primary_events, plan, stream_map)
 

@@ -12,9 +12,17 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from .calendar_io import load_event_records
-from .dashboard import DEFAULT_IGNORE, compact_title, parse_event, score_event_match
 from .history import DEFAULT_HISTORY_DIR, archive_report_history
-from .planner_data import normalize_calendar_events, normalize_calendar_provider, normalize_status_log
+from .planner_data import (
+    DEFAULT_IGNORE,
+    best_event_match,
+    load_status_log,
+    normalize_calendar_events,
+    normalize_calendar_provider,
+    normalize_status_log,
+    parse_event,
+    score_event_match,
+)
 
 
 DEFAULT_CALENDAR = "Research"
@@ -196,11 +204,6 @@ def detect_report_date(text: str) -> str | None:
     return None
 
 
-def normalize_match_text(text: str) -> str:
-    text = compact_title(text)
-    return re.sub(r"[\s\[\]（）()【】:：,，.。+＋/_-]+", "", text).lower()
-
-
 def collect_events(
     *,
     report_date: dt.date,
@@ -223,17 +226,6 @@ def collect_events(
     raw_events = normalize_calendar_events(raw_events)
     events = [parse_event(record, tz) for record in raw_events]
     return [event for event in events if event["calendar"] == calendar and event["calendar"] not in DEFAULT_IGNORE]
-
-
-def best_event_match(text: str, events: list[dict[str, Any]], report_date: dt.date) -> dict[str, Any] | None:
-    ranked = sorted(
-        events,
-        key=lambda item: (score_event_match(text, item), -abs((item["start"].date() - report_date).days)),
-        reverse=True,
-    )
-    if not ranked:
-        return None
-    return ranked[0] if score_event_match(text, ranked[0]) >= 60 else None
 
 
 def infer_status_candidates(payload: dict[str, Any], events: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -281,12 +273,6 @@ def infer_status_candidates(payload: dict[str, Any], events: list[dict[str, Any]
     return candidates
 
 
-def load_status_log(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return normalize_status_log({"statuses": []})
-    return normalize_status_log(json.loads(path.read_text(encoding="utf-8")))
-
-
 def merge_status_candidates(status_log: dict[str, Any], candidates: list[dict[str, Any]]) -> dict[str, Any]:
     statuses = status_log.setdefault("statuses", [])
     for candidate in candidates:
@@ -308,33 +294,43 @@ def merge_status_candidates(status_log: dict[str, Any], candidates: list[dict[st
     return status_log
 
 
-def main() -> int:
-    args = parse_args()
-    if args.print_template:
-        print(default_template())
-        return 0
-
-    if not args.input:
-        raise SystemExit("Missing --input. Use --print-template to view the fixed report template.")
-
+def resolve_args_paths(args: argparse.Namespace) -> dict[str, Any]:
+    """Resolve CLI arguments into validated paths and settings."""
     input_path = Path(args.input).expanduser().resolve()
     status_path = Path(args.status_file).expanduser().resolve()
     history_dir = Path(args.history_dir).expanduser().resolve()
     output_path = Path(args.output).expanduser().resolve() if args.output else None
-    tz = ZoneInfo(args.time_zone)
     events_file = Path(args.events_file).expanduser().resolve() if args.events_file else None
     calendar_script = Path(args.calendar_script).expanduser().resolve() if args.calendar_script else None
-    provider = normalize_calendar_provider(args.calendar_provider)
-    raw_text = load_text(input_path)
-    report_date_text = args.date or detect_report_date(raw_text) or dt.date.today().isoformat()
-    report_date = dt.date.fromisoformat(report_date_text)
-    workspace_base = history_dir.parent if history_dir.name == "history" else input_path.parent
+    return {
+        "input_path": input_path,
+        "status_path": status_path,
+        "history_dir": history_dir,
+        "output_path": output_path,
+        "events_file": events_file,
+        "calendar_script": calendar_script,
+        "tz": ZoneInfo(args.time_zone),
+        "provider": normalize_calendar_provider(args.calendar_provider),
+    }
 
+
+def process_report(
+    *,
+    raw_text: str,
+    report_date: dt.date,
+    tz: ZoneInfo,
+    calendar: str,
+    provider: str,
+    events_file: Path | None,
+    calendar_script: Path | None,
+    status_path: Path,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Parse report, infer statuses, and merge into status log."""
     payload = parse_daily_report(raw_text, report_date.isoformat())
     events = collect_events(
         report_date=report_date,
         tz=tz,
-        calendar=args.calendar,
+        calendar=calendar,
         provider=provider,
         events_file=events_file,
         calendar_script=calendar_script,
@@ -345,34 +341,84 @@ def main() -> int:
         json.loads(json.dumps(status_log, ensure_ascii=False)),
         payload["status_candidates"],
     )
+    return payload, effective_status_log
 
+
+def write_outputs(
+    *,
+    payload: dict[str, Any],
+    effective_status_log: dict[str, Any],
+    args: argparse.Namespace,
+    resolved: dict[str, Any],
+    report_date: dt.date,
+    workspace_base: Path,
+) -> None:
+    """Write status log, history archive, and output JSON."""
     if args.write_status_log:
-        status_path.parent.mkdir(parents=True, exist_ok=True)
-        status_path.write_text(json.dumps(effective_status_log, ensure_ascii=False, indent=2), encoding="utf-8")
-        payload["status_log_updated"] = display_path(status_path, workspace_base)
+        resolved["status_path"].parent.mkdir(parents=True, exist_ok=True)
+        resolved["status_path"].write_text(
+            json.dumps(effective_status_log, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        payload["status_log_updated"] = display_path(resolved["status_path"], workspace_base)
 
     if args.write_history:
         archive_info = archive_report_history(
             report_date=report_date,
             payload=payload,
             status_log=effective_status_log,
-            history_dir=history_dir,
+            history_dir=resolved["history_dir"],
             calendar=args.calendar,
-            tz=tz,
-            provider=provider,
-            events_file=events_file,
-            calendar_script=calendar_script,
-            source_report=input_path,
+            tz=resolved["tz"],
+            provider=resolved["provider"],
+            events_file=resolved["events_file"],
+            calendar_script=resolved["calendar_script"],
+            source_report=resolved["input_path"],
         )
         payload["history_archive_updated"] = archive_info
 
     output_text = json.dumps(payload, ensure_ascii=False, indent=2)
-    if output_path:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(output_text, encoding="utf-8")
-        print(output_path)
+    if resolved["output_path"]:
+        resolved["output_path"].parent.mkdir(parents=True, exist_ok=True)
+        resolved["output_path"].write_text(output_text, encoding="utf-8")
+        print(resolved["output_path"])
     else:
         print(output_text)
+
+
+def main() -> int:
+    args = parse_args()
+    if args.print_template:
+        print(default_template())
+        return 0
+
+    if not args.input:
+        raise SystemExit("Missing --input. Use --print-template to view the fixed report template.")
+
+    resolved = resolve_args_paths(args)
+    raw_text = load_text(resolved["input_path"])
+    report_date_text = args.date or detect_report_date(raw_text) or dt.date.today().isoformat()
+    report_date = dt.date.fromisoformat(report_date_text)
+    history_dir = resolved["history_dir"]
+    workspace_base = history_dir.parent if history_dir.name == "history" else resolved["input_path"].parent
+
+    payload, effective_status_log = process_report(
+        raw_text=raw_text,
+        report_date=report_date,
+        tz=resolved["tz"],
+        calendar=args.calendar,
+        provider=resolved["provider"],
+        events_file=resolved["events_file"],
+        calendar_script=resolved["calendar_script"],
+        status_path=resolved["status_path"],
+    )
+    write_outputs(
+        payload=payload,
+        effective_status_log=effective_status_log,
+        args=args,
+        resolved=resolved,
+        report_date=report_date,
+        workspace_base=workspace_base,
+    )
     return 0
 
 

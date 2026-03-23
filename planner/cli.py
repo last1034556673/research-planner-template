@@ -1,3 +1,5 @@
+"""Command-line interface for the research planner template."""
+
 from __future__ import annotations
 
 import argparse
@@ -100,10 +102,6 @@ def copy_template(source: Path, target: Path, force: bool) -> None:
 
 def run_module(module: str, args: list[str]) -> None:
     subprocess.run([sys.executable, "-m", module, *args], check=True)
-
-
-def today_iso(tz_name: str) -> str:
-    return dt.datetime.now(dt.timezone.utc).astimezone(ZoneInfo(tz_name)).date().isoformat()
 
 
 def prepare_report(paths, project_config: dict[str, str]) -> Path:
@@ -284,255 +282,165 @@ def template_sources() -> dict[str, Path]:
     }
 
 
+_LEVEL_LABELS = {"ok": "OK", "error": "ERROR", "warning": "WARN"}
+
+
 def _doctor_line(level: str, title: str, detail: str, fix: str | None = None) -> str:
-    lines = [f"[{level}] {title}", f"      {detail}"]
+    tag = _LEVEL_LABELS.get(level, level.upper())
+    lines = [f"[{tag}] {title}", f"      {detail}"]
     if fix:
         lines.append(f"      Next: {fix}")
     return "\n".join(lines)
 
 
+class _DoctorCollector:
+    """Accumulates doctor checks, counts, and display lines."""
+
+    def __init__(self) -> None:
+        self.errors = 0
+        self.warnings = 0
+        self.checks: list[dict[str, str]] = []
+        self.lines: list[str] = []
+
+    def ok(self, title: str, detail: str) -> None:
+        self.checks.append({"level": "ok", "title": title, "detail": detail, "fix": ""})
+        self.lines.append(_doctor_line("ok", title, detail))
+
+    def error(self, title: str, detail: str, fix: str) -> None:
+        self.errors += 1
+        self.checks.append({"level": "error", "title": title, "detail": detail, "fix": fix})
+        self.lines.append(_doctor_line("error", title, detail, fix))
+
+    def warning(self, title: str, detail: str, fix: str) -> None:
+        self.warnings += 1
+        self.checks.append({"level": "warning", "title": title, "detail": detail, "fix": fix})
+        self.lines.append(_doctor_line("warning", title, detail, fix))
+
+    def check_path_exists(self, path: Path, label: str, missing_detail: str, fix: str, level: str = "error") -> bool:
+        if path.exists():
+            self.ok(label, str(path))
+            return True
+        if level == "error":
+            self.error(label, missing_detail, fix)
+        else:
+            self.warning(label, missing_detail, fix)
+        return False
+
+
+def _check_template_sources(collector: _DoctorCollector) -> None:
+    for label, source in template_sources().items():
+        collector.check_path_exists(
+            source,
+            f"{label.capitalize()} source is available",
+            f"The repo is missing {source}. `{label}` init will fail.",
+            "Restore the tracked template files in this repository before using init.",
+        )
+
+
+def _check_required_files(collector: _DoctorCollector, paths) -> None:
+    required_files = [
+        ("Project config", paths.project_config, "Copy the file from templates/blank_workspace/config/project.yaml or initialize a new workspace."),
+        ("Constraints config", paths.constraints_config, "Copy the file from templates/blank_workspace/config/constraints.yaml or initialize a new workspace."),
+        ("Integrations config", paths.integrations_config, "Copy the file from templates/blank_workspace/config/integrations.yaml or initialize a new workspace."),
+        ("Workstreams config", paths.workstreams_config, "Copy the file from templates/blank_workspace/config/workstreams.yaml or initialize a new workspace."),
+        ("Daily report template", paths.report_template, "Copy the file from templates/blank_workspace/daily_report_template.md or initialize a new workspace."),
+        ("Plan details", paths.plan_details, "Restore data/plan_details.json from a starter template or recreate it before refreshing the dashboard."),
+        ("Status log", paths.status_log, "Restore data/status_log.json from a starter template or recreate it before ingesting reports."),
+    ]
+    for label, path, fix in required_files:
+        collector.check_path_exists(path, label, f"Missing required file: {path}", fix)
+
+
+def _check_optional_dirs(collector: _DoctorCollector, paths) -> None:
+    optional_dirs = [
+        ("Daily reports directory", paths.daily_reports_dir, "Run `research-planner prepare-report` to recreate it automatically."),
+        ("History directory", paths.history_dir, "Run `research-planner ingest-report --input <report>` to recreate it automatically."),
+        ("Outputs directory", paths.outputs_dir, "Run `research-planner refresh` to recreate it automatically."),
+    ]
+    for label, path, fix in optional_dirs:
+        collector.check_path_exists(
+            path,
+            label,
+            f"{path} does not exist yet.",
+            fix,
+            level="warning",
+        )
+
+
+def _check_calendar_provider(collector: _DoctorCollector, integrations: dict) -> None:
+    if integrations["calendar_provider"] in {"file", "ics"}:
+        collector.check_path_exists(
+            integrations["event_source_path"],
+            "File-based calendar source",
+            f"Planner events will load as an empty list without {integrations['event_source_path']}.",
+            "Create the JSON/ICS file or restore data/calendar_events.json from a starter template.",
+            level="warning",
+        )
+    else:
+        collector.check_path_exists(
+            integrations["calendar_script"],
+            "macOS calendar export script",
+            f"Expected {integrations['calendar_script']} for macOS calendar sync.",
+            "Restore integrations/macos/export_events.swift from the repository.",
+        )
+        collector.warning(
+            "macOS calendar access still needs user permission",
+            "Even with the script present, EventKit export can fail if Calendar access is denied.",
+            "Grant calendar permission to the terminal or app that runs the planner.",
+        )
+
+
 def doctor_report(paths) -> dict[str, object]:
     configs = load_configs(paths)
     integrations = integration_settings(paths, configs)
-    sources = template_sources()
-    errors = 0
-    warnings = 0
-    checks: list[dict[str, str]] = []
-    lines = [
+    collector = _DoctorCollector()
+    collector.lines.extend([
         f"Workspace: {paths.root}",
         f"Project name: {configs['project']['project_name']}",
         f"Time zone: {configs['project']['timezone']}",
         f"Calendar provider: {integrations['calendar_provider']}",
         f"Primary calendar: {integrations['primary_calendar_name']}",
         "",
-    ]
+    ])
 
-    for label, source in sources.items():
-        if source.exists():
-            checks.append({"level": "ok", "title": f"{label.capitalize()} source is available", "detail": str(source), "fix": ""})
-            lines.append(_doctor_line("OK", f"{label.capitalize()} source is available", str(source)))
-        else:
-            errors += 1
-            checks.append(
-                {
-                    "level": "error",
-                    "title": f"{label.capitalize()} source is missing",
-                    "detail": f"The repo is missing {source}. `{label}` init will fail.",
-                    "fix": "Restore the tracked template files in this repository before using init.",
-                }
-            )
-            lines.append(
-                _doctor_line(
-                    "ERROR",
-                    f"{label.capitalize()} source is missing",
-                    f"The repo is missing {source}. `{label}` init will fail.",
-                    "Restore the tracked template files in this repository before using init.",
-                )
-            )
+    _check_template_sources(collector)
 
     if not paths.root.exists():
-        errors += 1
-        checks.append(
-            {
-                "level": "error",
-                "title": "Workspace root is missing",
-                "detail": "The selected workspace has not been initialized yet.",
-                "fix": "Run `research-planner init --mode blank` or `research-planner --workspace ./workspace_demo init --mode demo`.",
-            }
+        collector.error(
+            "Workspace root is missing",
+            "The selected workspace has not been initialized yet.",
+            "Run `research-planner init --mode blank` or `research-planner --workspace ./workspace_demo init --mode demo`.",
         )
-        lines.append(
-            _doctor_line(
-                "ERROR",
-                "Workspace root is missing",
-                "The selected workspace has not been initialized yet.",
-                "Run `research-planner init --mode blank` or `research-planner --workspace ./workspace_demo init --mode demo`.",
-            )
-        )
-        warnings += 1
-        checks.append(
-            {
-                "level": "warning",
-                "title": "Detailed workspace checks were skipped",
-                "detail": "The workspace does not exist yet, so file-level checks would all fail for the same reason.",
-                "fix": "Initialize the workspace first, then run `research-planner doctor` again for a full check.",
-            }
-        )
-        lines.append(
-            _doctor_line(
-                "WARN",
-                "Detailed workspace checks were skipped",
-                "The workspace does not exist yet, so file-level checks would all fail for the same reason.",
-                "Initialize the workspace first, then run `research-planner doctor` again for a full check.",
-            )
+        collector.warning(
+            "Detailed workspace checks were skipped",
+            "The workspace does not exist yet, so file-level checks would all fail for the same reason.",
+            "Initialize the workspace first, then run `research-planner doctor` again for a full check.",
         )
     else:
-        checks.append({"level": "ok", "title": "Workspace root exists", "detail": str(paths.root), "fix": ""})
-        lines.append(_doctor_line("OK", "Workspace root exists", str(paths.root)))
-        required_files = [
-            ("Project config", paths.project_config, "Copy the file from templates/blank_workspace/config/project.yaml or initialize a new workspace."),
-            ("Constraints config", paths.constraints_config, "Copy the file from templates/blank_workspace/config/constraints.yaml or initialize a new workspace."),
-            ("Integrations config", paths.integrations_config, "Copy the file from templates/blank_workspace/config/integrations.yaml or initialize a new workspace."),
-            ("Workstreams config", paths.workstreams_config, "Copy the file from templates/blank_workspace/config/workstreams.yaml or initialize a new workspace."),
-            ("Daily report template", paths.report_template, "Copy the file from templates/blank_workspace/daily_report_template.md or initialize a new workspace."),
-            ("Plan details", paths.plan_details, "Restore data/plan_details.json from a starter template or recreate it before refreshing the dashboard."),
-            ("Status log", paths.status_log, "Restore data/status_log.json from a starter template or recreate it before ingesting reports."),
-        ]
-        for label, path, fix in required_files:
-            if path.exists():
-                checks.append({"level": "ok", "title": label, "detail": str(path), "fix": ""})
-                lines.append(_doctor_line("OK", label, str(path)))
-            else:
-                errors += 1
-                checks.append({"level": "error", "title": label, "detail": f"Missing required file: {path}", "fix": fix})
-                lines.append(_doctor_line("ERROR", label, f"Missing required file: {path}", fix))
-
-        if paths.daily_reports_dir.exists():
-            checks.append({"level": "ok", "title": "Daily reports directory", "detail": str(paths.daily_reports_dir), "fix": ""})
-            lines.append(_doctor_line("OK", "Daily reports directory", str(paths.daily_reports_dir)))
-        else:
-            warnings += 1
-            checks.append(
-                {
-                    "level": "warning",
-                    "title": "Daily reports directory is missing",
-                    "detail": f"{paths.daily_reports_dir} does not exist yet.",
-                    "fix": "Run `research-planner prepare-report` to recreate it automatically.",
-                }
-            )
-            lines.append(
-                _doctor_line(
-                    "WARN",
-                    "Daily reports directory is missing",
-                    f"{paths.daily_reports_dir} does not exist yet.",
-                    "Run `research-planner prepare-report` to recreate it automatically.",
-                )
-            )
-
-        if paths.history_dir.exists():
-            checks.append({"level": "ok", "title": "History directory", "detail": str(paths.history_dir), "fix": ""})
-            lines.append(_doctor_line("OK", "History directory", str(paths.history_dir)))
-        else:
-            warnings += 1
-            checks.append(
-                {
-                    "level": "warning",
-                    "title": "History directory is missing",
-                    "detail": f"{paths.history_dir} does not exist yet.",
-                    "fix": "Run `research-planner ingest-report --input <report>` to recreate it automatically.",
-                }
-            )
-            lines.append(
-                _doctor_line(
-                    "WARN",
-                    "History directory is missing",
-                    f"{paths.history_dir} does not exist yet.",
-                    "Run `research-planner ingest-report --input <report>` to recreate it automatically.",
-                )
-            )
-
-        if paths.outputs_dir.exists():
-            checks.append({"level": "ok", "title": "Outputs directory", "detail": str(paths.outputs_dir), "fix": ""})
-            lines.append(_doctor_line("OK", "Outputs directory", str(paths.outputs_dir)))
-        else:
-            warnings += 1
-            checks.append(
-                {
-                    "level": "warning",
-                    "title": "Outputs directory is missing",
-                    "detail": f"{paths.outputs_dir} does not exist yet.",
-                    "fix": "Run `research-planner refresh` to recreate it automatically.",
-                }
-            )
-            lines.append(
-                _doctor_line(
-                    "WARN",
-                    "Outputs directory is missing",
-                    f"{paths.outputs_dir} does not exist yet.",
-                    "Run `research-planner refresh` to recreate it automatically.",
-                )
-            )
-
-        if integrations["calendar_provider"] in {"file", "ics"}:
-            if integrations["event_source_path"].exists():
-                checks.append({"level": "ok", "title": "File-based calendar source", "detail": str(integrations["event_source_path"]), "fix": ""})
-                lines.append(_doctor_line("OK", "File-based calendar source", str(integrations["event_source_path"])))
-            else:
-                warnings += 1
-                checks.append(
-                    {
-                        "level": "warning",
-                        "title": "File-based calendar source is missing",
-                        "detail": f"Planner events will load as an empty list without {integrations['event_source_path']}.",
-                        "fix": "Create the JSON/ICS file or restore data/calendar_events.json from a starter template.",
-                    }
-                )
-                lines.append(
-                    _doctor_line(
-                        "WARN",
-                        "File-based calendar source is missing",
-                        f"Planner events will load as an empty list without {integrations['event_source_path']}.",
-                        "Create the JSON/ICS file or restore data/calendar_events.json from a starter template.",
-                    )
-                )
-        else:
-            if integrations["calendar_script"].exists():
-                checks.append({"level": "ok", "title": "macOS calendar export script", "detail": str(integrations["calendar_script"]), "fix": ""})
-                lines.append(_doctor_line("OK", "macOS calendar export script", str(integrations["calendar_script"])))
-            else:
-                errors += 1
-                checks.append(
-                    {
-                        "level": "error",
-                        "title": "macOS calendar export script is missing",
-                        "detail": f"Expected {integrations['calendar_script']} for macOS calendar sync.",
-                        "fix": "Restore integrations/macos/export_events.swift from the repository.",
-                    }
-                )
-                lines.append(
-                    _doctor_line(
-                        "ERROR",
-                        "macOS calendar export script is missing",
-                        f"Expected {integrations['calendar_script']} for macOS calendar sync.",
-                        "Restore integrations/macos/export_events.swift from the repository.",
-                    )
-                )
-            warnings += 1
-            checks.append(
-                {
-                    "level": "warning",
-                    "title": "macOS calendar access still needs user permission",
-                    "detail": "Even with the script present, EventKit export can fail if Calendar access is denied.",
-                    "fix": "Grant calendar permission to the terminal or app that runs the planner.",
-                }
-            )
-            lines.append(
-                _doctor_line(
-                    "WARN",
-                    "macOS calendar access still needs user permission",
-                    "Even with the script present, EventKit export can fail if Calendar access is denied.",
-                    "Grant calendar permission to the terminal or app that runs the planner.",
-                )
-            )
+        collector.ok("Workspace root exists", str(paths.root))
+        _check_required_files(collector, paths)
+        _check_optional_dirs(collector, paths)
+        _check_calendar_provider(collector, integrations)
 
     validation = validate_workspace_files(paths) if paths.root.exists() else {}
-    for name, issues in validation.items():
+    for issues in validation.values():
         for item in issues:
             if item["level"] == "error":
-                errors += 1
+                collector.errors += 1
             elif item["level"] == "warning":
-                warnings += 1
+                collector.warnings += 1
 
-    summary = f"Summary: {errors} error(s), {warnings} warning(s)"
+    summary = f"Summary: {collector.errors} error(s), {collector.warnings} warning(s)"
     return {
         "summary_text": summary,
-        "text": "\n".join([summary, ""] + lines),
-        "summary": {"errors": errors, "warnings": warnings},
+        "text": "\n".join([summary, ""] + collector.lines),
+        "summary": {"errors": collector.errors, "warnings": collector.warnings},
         "workspace": str(paths.root),
         "project_name": configs["project"]["project_name"],
         "calendar_provider": integrations["calendar_provider"],
-        "checks": checks,
+        "checks": collector.checks,
         "validation": validation,
-        "ok": errors == 0,
+        "ok": collector.errors == 0,
     }
 
 
@@ -556,11 +464,9 @@ def refresh_demo_assets(paths, *, skip_screenshots: bool = False) -> int:
     return 0
 
 
-def main() -> int:
-    args = parse_args()
-    paths = build_paths(args.workspace)
-
-    if args.command == "init":
+def dispatch_standalone(command: str, args: argparse.Namespace, paths) -> int | None:
+    """Handle commands that don't require a loaded workspace config."""
+    if command == "init":
         source = template_sources()["blank" if args.mode == "blank" else "demo"]
         if not source.exists():
             raise SystemExit(f"Missing init source: {source}")
@@ -568,31 +474,25 @@ def main() -> int:
         configure_initialized_workspace(paths, args)
         print(paths.root)
         return 0
-
-    if args.command == "doctor":
+    if command == "doctor":
         return doctor(paths, json_mode=args.json)
-
-    if args.command == "refresh-demo-assets":
+    if command == "refresh-demo-assets":
         return refresh_demo_assets(paths, skip_screenshots=args.skip_screenshots)
+    return None
 
-    configs = load_configs(paths) if paths.root.exists() else None
 
-    if configs is None:
-        raise SystemExit(f"Workspace not found: {paths.root}. Run `research-planner init --mode blank` first.")
-
-    if args.command == "prepare-report":
+def dispatch_workspace(command: str, args: argparse.Namespace, paths, configs: dict[str, dict]) -> int:
+    """Handle commands that require a loaded workspace config."""
+    if command == "prepare-report":
         prepare_report(paths, configs["project"])
         return 0
-
-    if args.command == "refresh":
+    if command == "refresh":
         print(refresh_dashboard(paths, configs))
         return 0
-
-    if args.command == "ingest-report":
+    if command == "ingest-report":
         ingest_report(paths, configs, Path(args.input).expanduser().resolve(), replan_mode=args.replan)
         return 0
-
-    if args.command == "replan":
+    if command == "replan":
         integrations = integration_settings(paths, configs)
         run_args = [
             "--input",
@@ -612,12 +512,25 @@ def main() -> int:
         if args.apply:
             refresh_dashboard(paths, configs)
         return 0
-
-    if args.command == "summary":
+    if command == "summary":
         print(generate_summary(paths, configs, args.period, args.target))
         return 0
+    raise SystemExit(f"Unknown command: {command}")
 
-    raise SystemExit(f"Unknown command: {args.command}")
+
+def main() -> int:
+    args = parse_args()
+    paths = build_paths(args.workspace)
+
+    result = dispatch_standalone(args.command, args, paths)
+    if result is not None:
+        return result
+
+    configs = load_configs(paths) if paths.root.exists() else None
+    if configs is None:
+        raise SystemExit(f"Workspace not found: {paths.root}. Run `research-planner init --mode blank` first.")
+
+    return dispatch_workspace(args.command, args, paths, configs)
 
 
 if __name__ == "__main__":
