@@ -1,3 +1,5 @@
+"""Workspace path resolution and directory scaffolding."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

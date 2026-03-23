@@ -1,3 +1,5 @@
+"""Workspace configuration loading and merging utilities."""
+
 from __future__ import annotations
 
 from pathlib import Path

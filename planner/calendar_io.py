@@ -1,3 +1,5 @@
+"""Calendar event I/O adapters for file, macOS EventKit, and ICS sources."""
+
 from __future__ import annotations
 
 import datetime as dt

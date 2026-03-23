@@ -1,3 +1,5 @@
+"""Workspace file validation for configs, plan details, status log, and calendar events."""
+
 from __future__ import annotations
 
 import json

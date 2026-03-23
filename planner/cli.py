@@ -1,3 +1,5 @@
+"""Command-line interface for the research planner template."""
+
 from __future__ import annotations
 
 import argparse

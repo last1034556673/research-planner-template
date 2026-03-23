@@ -18,6 +18,7 @@ from .history import (
     infer_reason_category,
     load_jsonl,
 )
+from .templates import load_css
 
 
 STATUS_LABELS = {
@@ -384,6 +385,7 @@ def render_html(period: str, label: str, records: list[dict[str, Any]], time_zon
             "Monthly review summarizes the archived movement for each month.",
         )
     overview_column_count = max(1, len(buckets))
+    css = load_css("history_summary.css")
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -391,198 +393,8 @@ def render_html(period: str, label: str, records: list[dict[str, Any]], time_zon
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Research Planner History Summary · {html.escape(label)}</title>
   <style>
-    :root {{
-      --bg: #f5efe7;
-      --paper: #fffdfa;
-      --ink: #2f241f;
-      --muted: #76685f;
-      --line: #e7dbc9;
-      --shadow: 0 18px 40px rgba(66, 42, 26, 0.08);
-      --done: #1d7559;
-      --partial: #8a6621;
-      --moved: #8a6e63;
-      --incomplete: #9f4740;
-      --conditional: #5e60ce;
-      --pending: #8a6b2b;
-      --unsynced: #954f4f;
-      --planned: #66717f;
-    }}
-    * {{ box-sizing: border-box; }}
-    body {{
-      margin: 0;
-      color: var(--ink);
-      font-family: "Avenir Next", "Segoe UI", sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(240, 204, 156, 0.24), transparent 30%),
-        linear-gradient(180deg, #f7f3ec 0%, var(--bg) 100%);
-    }}
-    .shell {{ max-width: 1600px; margin: 0 auto; padding: 28px; }}
-    .hero, .panel {{
-      background: rgba(255,253,250,0.95);
-      border: 1px solid rgba(149, 113, 81, 0.13);
-      border-radius: 30px;
-      box-shadow: var(--shadow);
-      padding: 24px;
-    }}
-    .hero h1, .panel-head h2 {{ margin: 0; }}
-    .hero p, .panel-head p {{ margin: 0; color: var(--muted); }}
-    .hero-top, .panel-head {{
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      flex-wrap: wrap;
-      align-items: end;
-    }}
-    .hero-stats, .stream-grid {{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 14px;
-      margin-top: 18px;
-    }}
-    .stat-card, .stream-card {{
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 16px;
-      background: var(--paper);
-    }}
-    .stat-card span {{
-      display: block;
-      color: var(--muted);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      font-size: 12px;
-      margin-bottom: 8px;
-    }}
-    .stat-card strong {{ font-size: 28px; }}
-    .panel {{ margin-top: 22px; }}
-    .overview-shell {{ overflow-x: auto; border-top: 1px solid var(--line); padding-top: 14px; }}
-    .overview-row {{
-      display: grid;
-      grid-template-columns: 250px minmax(900px, 1fr);
-      gap: 14px;
-      margin-bottom: 14px;
-    }}
-    .overview-stream {{
-      background: #f8f1e8;
-      border: 1px solid var(--line);
-      border-radius: 20px;
-      padding: 14px;
-    }}
-    .overview-stream strong {{ display: block; margin-bottom: 6px; }}
-    .overview-stream small {{ color: var(--muted); }}
-    .overview-grid {{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 10px;
-    }}
-    .overview-grid-head {{
-      grid-template-columns: repeat({overview_column_count}, minmax(160px, 1fr));
-    }}
-    .overview-head-cell, .overview-cell {{
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 12px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(249,242,235,0.9));
-      min-height: 92px;
-    }}
-    .overview-head-cell small {{ display: block; color: var(--muted); margin-top: 6px; }}
-    .overview-cell ul, .review-card ul {{
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      gap: 8px;
-    }}
-    .overview-cell li, .review-card li {{
-      border: 1px solid rgba(123, 100, 83, 0.12);
-      border-radius: 14px;
-      padding: 8px 10px;
-      background: rgba(255,255,255,0.8);
-      display: grid;
-      gap: 6px;
-    }}
-    .cell-empty {{
-      min-height: 56px;
-      border: 1px dashed rgba(123, 100, 83, 0.25);
-      border-radius: 14px;
-      background: rgba(255,255,255,0.65);
-    }}
-    .status-badge {{
-      display: inline-flex;
-      align-items: center;
-      padding: 6px 9px;
-      border-radius: 999px;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: white;
-      font-weight: 700;
-    }}
-    .status-completed {{ background: var(--done); }}
-    .status-partial {{ background: var(--partial); }}
-    .status-moved {{ background: var(--moved); }}
-    .status-incomplete {{ background: var(--incomplete); }}
-    .status-conditional {{ background: var(--conditional); }}
-    .status-pending-sync {{ background: var(--pending); }}
-    .status-unsynced {{ background: var(--unsynced); }}
-    .status-planned {{ background: var(--planned); }}
-    .reason-row {{
-      display: grid;
-      grid-template-columns: minmax(180px, 280px) 1fr 60px;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 10px;
-    }}
-    .reason-track {{
-      height: 14px;
-      border-radius: 999px;
-      background: #efe4d6;
-      overflow: hidden;
-    }}
-    .reason-fill {{
-      height: 100%;
-      background: linear-gradient(90deg, #c5774f, #8f5d33);
-      border-radius: 999px;
-    }}
-    .reason-label, .reason-value {{ color: var(--muted); }}
-    .review-grid {{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 14px;
-    }}
-    .review-card {{
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 16px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(249,242,235,0.9));
-    }}
-    .review-card h3 {{ margin: 0 0 4px; }}
-    .review-sub {{ margin: 0 0 12px; color: var(--muted); }}
-    .review-line-top {{
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-    }}
-    .review-card strong {{ display: block; }}
-    .review-card p {{ margin: 0; color: var(--muted); }}
-    .review-note {{ font-size: 13px; }}
-    .empty-state {{
-      padding: 18px;
-      border: 1px dashed rgba(122, 96, 80, 0.3);
-      border-radius: 18px;
-      background: rgba(255,255,255,0.68);
-      color: var(--muted);
-    }}
-    .empty-state.small {{ padding: 12px; font-size: 14px; }}
-    @media (max-width: 960px) {{
-      .overview-row {{ grid-template-columns: 220px minmax(720px, 1fr); }}
-    }}
-    @media (max-width: 720px) {{
-      .shell {{ padding: 16px; }}
-      .overview-row {{ grid-template-columns: 180px minmax(620px, 1fr); }}
-    }}
+    {css}
+    .overview-grid-head {{ grid-template-columns: repeat({overview_column_count}, minmax(160px, 1fr)); }}
   </style>
 </head>
 <body>

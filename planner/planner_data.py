@@ -1,3 +1,5 @@
+"""Core data normalization and matching for plan details, status logs, and calendar events."""
+
 from __future__ import annotations
 
 import datetime as dt
