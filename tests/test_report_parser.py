@@ -5,13 +5,12 @@ import unittest
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
+from planner.planner_data import best_event_match, load_status_log
 from planner.report_parser import (
-    best_event_match,
     collect_events,
     detect_report_date,
     empty_payload,
     infer_status_candidates,
-    load_status_log,
     merge_status_candidates,
     parse_daily_report,
     split_inline_items,

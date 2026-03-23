@@ -12,9 +12,17 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from .calendar_io import load_event_records
-from .dashboard import DEFAULT_IGNORE, parse_event
 from .history import DEFAULT_HISTORY_DIR, archive_report_history
-from .planner_data import normalize_calendar_events, normalize_calendar_provider, normalize_match_text, normalize_status_log, score_event_match
+from .planner_data import (
+    DEFAULT_IGNORE,
+    best_event_match,
+    load_status_log,
+    normalize_calendar_events,
+    normalize_calendar_provider,
+    normalize_status_log,
+    parse_event,
+    score_event_match,
+)
 
 
 DEFAULT_CALENDAR = "Research"
@@ -220,17 +228,6 @@ def collect_events(
     return [event for event in events if event["calendar"] == calendar and event["calendar"] not in DEFAULT_IGNORE]
 
 
-def best_event_match(text: str, events: list[dict[str, Any]], report_date: dt.date) -> dict[str, Any] | None:
-    ranked = sorted(
-        events,
-        key=lambda item: (score_event_match(text, item), -abs((item["start"].date() - report_date).days)),
-        reverse=True,
-    )
-    if not ranked:
-        return None
-    return ranked[0] if score_event_match(text, ranked[0]) >= 60 else None
-
-
 def infer_status_candidates(payload: dict[str, Any], events: list[dict[str, Any]]) -> list[dict[str, Any]]:
     report_date = dt.date.fromisoformat(payload["date"])
     reasons = "；".join(payload["execution"]["reasons"]).strip()
@@ -274,12 +271,6 @@ def infer_status_candidates(payload: dict[str, Any], events: list[dict[str, Any]
             }
         )
     return candidates
-
-
-def load_status_log(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return normalize_status_log({"statuses": []})
-    return normalize_status_log(json.loads(path.read_text(encoding="utf-8")))
 
 
 def merge_status_candidates(status_log: dict[str, Any], candidates: list[dict[str, Any]]) -> dict[str, Any]:

@@ -6,28 +6,30 @@ from zoneinfo import ZoneInfo
 
 from planner.dashboard import (
     annotate_event_status,
-    best_event_match,
     bucket_events_by_day,
-    categorize,
     clip_text,
     collect_status_counts,
-    compact_title,
     format_event_window,
-    is_conditional,
     match_descriptor_to_event,
     match_status_entry,
     merged_streams,
-    normalize_match_text,
     normalize_streams,
-    parse_event,
     parse_sync_deadline,
     render_reason_details,
     render_status_badge,
-    score_event_match,
     visible_primary,
     weekday_label,
     DEFAULT_SYNC_DEADLINE,
     STATUS_META,
+)
+from planner.planner_data import (
+    best_event_match,
+    categorize,
+    compact_title,
+    is_conditional,
+    normalize_match_text,
+    parse_event,
+    score_event_match,
 )
 
 

@@ -8,8 +8,11 @@ from zoneinfo import ZoneInfo
 
 from planner.dashboard import (
     collect_status_counts,
+    collect_today_context,
     render_conditional_panel,
     render_experiment_timelines,
+    render_filter_controls,
+    render_filter_script,
     render_gantt,
     render_html,
     render_today_plan,
@@ -72,6 +75,80 @@ def _make_record(title: str, date: str = "2026-03-15", status: str = "completed"
         "planned_start": f"{date}T09:00:00+08:00",
     }
     return normalize_record(record)
+
+
+class CollectTodayContextTests(unittest.TestCase):
+    def test_with_plan_day(self) -> None:
+        plan = {
+            "experiments": [],
+            "days": [{
+                "date": "2026-03-15",
+                "focus": "Testing",
+                "notes": ["Note 1"],
+                "tasks": [{
+                    "title": "Planned task",
+                    "stream": "cell",
+                    "task_id": "task-1",
+                }],
+            }],
+        }
+        events = [_make_event("Planned task")]
+        primary_by_day = {"2026-03-15": events}
+        stream_map = {"cell": {"id": "cell", "label": "Cell Expansion"}, "general": {"id": "general", "label": "General"}}
+        ctx = collect_today_context(
+            today=dt.date(2026, 3, 15),
+            primary_by_day=primary_by_day,
+            external_by_day={},
+            plan=plan,
+            stream_map=stream_map,
+        )
+        self.assertIsNotNone(ctx["plan_day"])
+        self.assertEqual(len(ctx["tasks"]), 1)
+        self.assertEqual(ctx["tasks"][0]["title"], "Planned task")
+
+    def test_without_plan_day_uses_events(self) -> None:
+        events = [_make_event("Calendar event")]
+        primary_by_day = {"2026-03-15": events}
+        stream_map = {"general": {"id": "general", "label": "General"}}
+        ctx = collect_today_context(
+            today=dt.date(2026, 3, 15),
+            primary_by_day=primary_by_day,
+            external_by_day={},
+            plan={"experiments": [], "days": []},
+            stream_map=stream_map,
+        )
+        self.assertIsNone(ctx["plan_day"])
+        self.assertEqual(len(ctx["tasks"]), 1)
+        self.assertEqual(ctx["tasks"][0]["title"], "Calendar event")
+
+    def test_empty_day(self) -> None:
+        ctx = collect_today_context(
+            today=dt.date(2026, 3, 15),
+            primary_by_day={},
+            external_by_day={},
+            plan={"experiments": [], "days": []},
+            stream_map={},
+        )
+        self.assertEqual(ctx["tasks"], [])
+
+
+class RenderFilterControlsTests(unittest.TestCase):
+    def test_renders_stream_options(self) -> None:
+        streams = [{"id": "cell", "label": "Cell Expansion"}, {"id": "rna", "label": "RNA Analysis"}]
+        html_output = render_filter_controls(streams)
+        self.assertIn("Cell Expansion", html_output)
+        self.assertIn("RNA Analysis", html_output)
+        self.assertIn("stream-filter", html_output)
+        self.assertIn("status-filter", html_output)
+        self.assertIn("search-filter", html_output)
+
+
+class RenderFilterScriptTests(unittest.TestCase):
+    def test_contains_today_iso(self) -> None:
+        script = render_filter_script("2026-03-15")
+        self.assertIn("2026-03-15", script)
+        self.assertIn("applyFilters", script)
+        self.assertIn("<script>", script)
 
 
 class RenderGanttTests(unittest.TestCase):

@@ -218,6 +218,7 @@ def year_month_buckets(start: dt.date, end: dt.date) -> list[dict[str, Any]]:
 
 
 def render_bucket_overview(records: list[dict[str, Any]], buckets: list[dict[str, Any]], title: str, subtitle: str) -> str:
+    """Render the grid overview panel with records bucketed by time period and stream."""
     grouped: dict[str, dict[int, list[dict[str, Any]]]] = defaultdict(lambda: defaultdict(list))
     for record in records:
         for index, bucket in enumerate(buckets):
@@ -273,6 +274,7 @@ def render_bucket_overview(records: list[dict[str, Any]], buckets: list[dict[str
 
 
 def render_daily_review(records: list[dict[str, Any]], start: dt.date, end: dt.date) -> str:
+    """Render day-by-day review cards for the month period."""
     grouped: dict[dt.date, list[dict[str, Any]]] = defaultdict(list)
     for record in records:
         grouped[record["event_day"]].append(record)
@@ -309,6 +311,7 @@ def render_daily_review(records: list[dict[str, Any]], start: dt.date, end: dt.d
 
 
 def render_group_review(records: list[dict[str, Any]], buckets: list[dict[str, Any]], title: str, subtitle: str) -> str:
+    """Render grouped review cards (weekly or monthly) for quarter/year summaries."""
     cards = []
     for bucket in buckets:
         items = [record for record in records if bucket["start"] <= record["event_day"] <= bucket["end"]]

@@ -9,20 +9,31 @@ import datetime as dt
 import html
 import json
 from pathlib import Path
-import re
 from typing import Any
 from zoneinfo import ZoneInfo
 
 from .calendar_io import load_event_records
-from .planner_data import compact_title, event_matches_status_entry, normalize_calendar_events, normalize_match_text, normalize_plan_details, normalize_status_log, score_event_match
+from .planner_data import (
+    DEFAULT_IGNORE,
+    DEFAULT_PRIMARY_CALENDAR,
+    best_event_match,
+    categorize,
+    compact_title,
+    event_matches_status_entry,
+    is_conditional,
+    load_status_log,
+    normalize_calendar_events,
+    normalize_plan_details,
+    normalize_status_log,
+    parse_event,
+    score_event_match,
+)
 from .templates import load_css
 
 
 DEFAULT_OUTPUT = "future_experiment_schedule.html"
-DEFAULT_PRIMARY_CALENDAR = "Research"
 DEFAULT_DETAILS_FILE = "plan_details.json"
 DEFAULT_STATUS_FILE = "status_log.json"
-DEFAULT_IGNORE = {"Birthdays", "Holidays", "China Holidays", "Chinese Holidays"}
 DISPLAY_EXCLUDE_KEYWORDS = ("Lunch Break", "午餐", "break", "Focus Block")
 WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 DEFAULT_SYNC_DEADLINE = dt.time(9, 30)
@@ -49,17 +60,6 @@ STATUS_META = {
     "conditional": {"label": "Conditional", "class": "status-conditional"},
     "planned": {"label": "Planned", "class": "status-planned"},
 }
-
-GENERIC_CATEGORIZATION = (
-    ("mouse", ("mouse", "animal", "in vivo", "cohort", "tumor model", "小鼠", "动物")),
-    ("cell", ("cell", "culture", "passage", "seed", "confluence", "organoid", "传代", "细胞", "扩增")),
-    ("spheroid", ("3d", "spheroid", "organoid", "embed", "matrigel", "肿瘤球", "成球")),
-    ("flow", ("flow", "cytometry", "staining", "fitc", "cfse", "uptake", "assay", "流式")),
-    ("rna", ("rna", "analysis", "figure", "slides", "ppt", "summary", "results", "plot")),
-    ("material", ("dls", "zeta", "characterization", "particle", "material", "sizing", "表征")),
-    ("robot", ("motion", "microrobot", "pipeline", "navigation", "tracking", "运动", "机器人")),
-    ("prep", ("prepare", "booking", "order", "check", "review", "follow-up", "整理", "订购", "准备")),
-)
 
 
 def parse_args() -> argparse.Namespace:
@@ -97,12 +97,6 @@ def load_plan_details(path: Path) -> dict[str, Any]:
     return normalize_plan_details(json.loads(path.read_text(encoding="utf-8")))
 
 
-def load_status_log(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return normalize_status_log({"statuses": []})
-    return normalize_status_log(json.loads(path.read_text(encoding="utf-8")))
-
-
 def merged_streams(plan: dict[str, Any], extra_streams: list[dict[str, Any]] | None = None) -> list[dict[str, str]]:
     by_id = {item["id"]: {"id": item["id"], "label": item["label"]} for item in DEFAULT_STREAMS}
     for source in (plan.get("streams", []), extra_streams or []):
@@ -119,20 +113,6 @@ def merged_streams(plan: dict[str, Any], extra_streams: list[dict[str, Any]] | N
     return ordered
 
 
-def categorize(title: str) -> str:
-    title_lower = title.lower()
-    for stream_id, keywords in GENERIC_CATEGORIZATION:
-        if any(keyword in title_lower or keyword in title for keyword in keywords):
-            return stream_id
-    return "general"
-
-
-def is_conditional(title: str) -> bool:
-    markers = ("if ", "when ", "once ", "after confirmation", "if confluence", "若", "待确认", "条件")
-    title_lower = title.lower()
-    return any(marker in title_lower or marker in title for marker in markers)
-
-
 def clip_text(text: str, limit: int = 40) -> str:
     if len(text) <= limit:
         return text
@@ -144,37 +124,9 @@ def weekday_label(value: dt.date | dt.datetime) -> str:
     return WEEKDAY_LABELS[date_value.weekday()]
 
 
-def parse_event(record: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:
-    start = dt.datetime.fromisoformat(record["start"]).astimezone(tz)
-    end = dt.datetime.fromisoformat(record["end"]).astimezone(tz)
-    title = record["title"]
-    return {
-        "id": f"{record.get('calendar', '')}|{start.isoformat()}|{title}",
-        "calendar": record.get("calendar", DEFAULT_PRIMARY_CALENDAR),
-        "event_id": record.get("event_id"),
-        "task_id": record.get("task_id"),
-        "title": title,
-        "short_title": compact_title(title),
-        "start": start,
-        "end": end,
-        "is_all_day": bool(record.get("isAllDay", False)),
-        "stream": record.get("stream") or categorize(title),
-        "display_streams": list(dict.fromkeys(record.get("display_streams", []) or [record.get("stream") or categorize(title)])),
-        "conditional": bool(record.get("conditional")) or is_conditional(title),
-        "aliases": list(dict.fromkeys(record.get("aliases", []) or [title])),
-    }
-
-
 def visible_primary(event: dict[str, Any]) -> bool:
     title_lower = event["title"].lower()
     return not any(keyword.lower() in title_lower for keyword in DISPLAY_EXCLUDE_KEYWORDS)
-
-
-def best_event_match(text: str, events: list[dict[str, Any]]) -> dict[str, Any] | None:
-    ranked = sorted(events, key=lambda item: (score_event_match(text, item), item["start"]), reverse=True)
-    if not ranked:
-        return None
-    return ranked[0] if score_event_match(text, ranked[0]) >= 60 else None
 
 
 def match_status_entry(event: dict[str, Any], entries: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -320,6 +272,7 @@ def collect_window_events(
     include_past: bool,
     sync_deadline: dt.time | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dt.datetime]:
+    """Load, parse, and annotate events for the dashboard window, splitting primary vs external."""
     now = dt.datetime.now(dt.timezone.utc).astimezone(tz)
     raw_records = load_event_records(
         start=window_start,
@@ -365,6 +318,7 @@ def collect_today_context(
     plan: dict[str, Any],
     stream_map: dict[str, dict[str, str]],
 ) -> dict[str, Any]:
+    """Build the today-focused context dict with tasks, events, and plan details for rendering."""
     today_key = today.isoformat()
     plan_day = next((day for day in plan.get("days", []) if day.get("date") == today_key), None)
     primary_events = primary_by_day.get(today_key, [])
@@ -491,6 +445,7 @@ def render_reason_details(
 
 
 def render_gantt(primary_events: list[dict[str, Any]], streams: list[dict[str, str]], days: list[dt.date]) -> str:
+    """Render the Gantt-style window overview grid with events grouped by stream and date."""
     stream_map = {item["id"]: item["label"] for item in streams}
     grouped: dict[str, dict[str, list[dict[str, Any]]]] = defaultdict(lambda: defaultdict(list))
     for event in primary_events:
@@ -553,6 +508,7 @@ def render_gantt(primary_events: list[dict[str, Any]], streams: list[dict[str, s
 
 
 def render_today_plan(today_context: dict[str, Any], today: dt.date) -> str:
+    """Render the Today's Plan panel with task cards and external calendar events."""
     plan_day = today_context["plan_day"]
     tasks = today_context["tasks"]
     external_events = today_context["external_events"]
@@ -643,6 +599,7 @@ def render_conditional_panel(items: list[dict[str, Any]]) -> str:
 
 
 def render_experiment_timelines(plan: dict[str, Any], events: list[dict[str, Any]], stream_map: dict[str, dict[str, str]]) -> str:
+    """Render the experiment timelines panel showing multi-step workflows."""
     if not plan.get("experiments"):
         return (
             "<section class=\"panel\" data-panel=\"experiment-timelines\">"
@@ -694,19 +651,8 @@ def render_experiment_timelines(plan: dict[str, Any], events: list[dict[str, Any
     )
 
 
-def render_html(
-    *,
-    project_name: str,
-    days: list[dt.date],
-    streams: list[dict[str, str]],
-    primary_events: list[dict[str, Any]],
-    external_events: list[dict[str, Any]],
-    plan: dict[str, Any],
-    today_context: dict[str, Any],
-    conditional_items: list[dict[str, Any]],
-) -> str:
-    stream_map = {item["id"]: item for item in streams}
-    counts = collect_status_counts(primary_events)
+def render_filter_controls(streams: list[dict[str, str]]) -> str:
+    """Render the stream/status/search filter controls panel."""
     stream_options = "".join(
         f"<option value=\"{html.escape(item['id'])}\">{html.escape(item['label'])}</option>"
         for item in streams
@@ -715,74 +661,25 @@ def render_html(
         f"<option value=\"{html.escape(key)}\">{html.escape(meta['label'])}</option>"
         for key, meta in STATUS_META.items()
     )
-    legend = "".join(
-        f"<span class=\"legend-chip\"><i class=\"legend-dot {meta['class']}\"></i>{html.escape(meta['label'])}</span>"
-        for meta in STATUS_META.values()
+    return (
+        "<section class=\"panel controls-panel\">"
+        "<div class=\"control\"><label for=\"stream-filter\">Stream</label>"
+        f"<select id=\"stream-filter\"><option value=\"\">All streams</option>{stream_options}</select></div>"
+        "<div class=\"control\"><label for=\"status-filter\">Status</label>"
+        f"<select id=\"status-filter\"><option value=\"\">All statuses</option>{status_options}</select></div>"
+        "<div class=\"control\"><label for=\"search-filter\">Search</label>"
+        "<input id=\"search-filter\" type=\"search\" placeholder=\"Title, blocker, note\"></div>"
+        "<div class=\"control toggle-row\">"
+        "<label><input id=\"hide-empty-streams\" type=\"checkbox\"> Hide empty streams</label>"
+        "<label><input id=\"today-only\" type=\"checkbox\"> Today only</label>"
+        "</div></section>"
     )
-    hero_range = f"{days[0]:%b %d} - {days[-1]:%b %d, %Y}"
-    today = today_context["primary_events"][0]["start"].date() if today_context["primary_events"] else dt.datetime.now().date()
-    css = load_css("dashboard.css")
-    gantt_columns_css = f".gantt-grid {{ grid-template-columns: repeat({len(days)}, minmax(120px, 1fr)); }}"
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{html.escape(project_name)} Planner</title>
-  <style>
-    {css}
-    {gantt_columns_css}
-  </style>
-</head>
-<body>
-  <div class="shell">
-    <section class="hero">
-      <div class="hero-top">
-        <div>
-          <p class="kicker">Research Planner Template</p>
-          <h1>{html.escape(project_name)}</h1>
-          <p>{html.escape(hero_range)}. Short window for execution, review, and rolling replanning.</p>
-        </div>
-        <div class="legend-bar">{legend}</div>
-      </div>
-      <div class="hero-stats">
-        <article class="stat-card"><span>Completed / Partial</span><strong>{counts['completed'] + counts['partial']}</strong></article>
-        <article class="stat-card"><span>Moved / Incomplete</span><strong>{counts['moved'] + counts['incomplete']}</strong></article>
-        <article class="stat-card"><span>Conditional</span><strong>{counts['conditional']}</strong></article>
-        <article class="stat-card"><span>Pending Sync</span><strong>{counts['pending_sync'] + counts['unsynced']}</strong></article>
-      </div>
-    </section>
-    <section class="panel controls-panel">
-      <div class="control">
-        <label for="stream-filter">Stream</label>
-        <select id="stream-filter">
-          <option value="">All streams</option>
-          {stream_options}
-        </select>
-      </div>
-      <div class="control">
-        <label for="status-filter">Status</label>
-        <select id="status-filter">
-          <option value="">All statuses</option>
-          {status_options}
-        </select>
-      </div>
-      <div class="control">
-        <label for="search-filter">Search</label>
-        <input id="search-filter" type="search" placeholder="Title, blocker, note">
-      </div>
-      <div class="control toggle-row">
-        <label><input id="hide-empty-streams" type="checkbox"> Hide empty streams</label>
-        <label><input id="today-only" type="checkbox"> Today only</label>
-      </div>
-    </section>
-    {render_gantt(primary_events, streams, days)}
-    {render_today_plan(today_context, today)}
-    {render_conditional_panel(conditional_items)}
-    {render_experiment_timelines(plan, primary_events, stream_map)}
-  </div>
-  <script>
-    const todayIso = "{today.isoformat()}";
+
+
+def render_filter_script(today_iso: str) -> str:
+    """Render the client-side JavaScript for interactive filtering."""
+    return f"""<script>
+    const todayIso = "{today_iso}";
     const streamFilter = document.getElementById("stream-filter");
     const statusFilter = document.getElementById("status-filter");
     const searchFilter = document.getElementById("search-filter");
@@ -832,7 +729,67 @@ def render_html(
       }});
     }});
     applyFilters();
-  </script>
+  </script>"""
+
+
+def render_html(
+    *,
+    project_name: str,
+    days: list[dt.date],
+    streams: list[dict[str, str]],
+    primary_events: list[dict[str, Any]],
+    external_events: list[dict[str, Any]],
+    plan: dict[str, Any],
+    today_context: dict[str, Any],
+    conditional_items: list[dict[str, Any]],
+) -> str:
+    """Assemble the full dashboard HTML document from rendered sections."""
+    stream_map = {item["id"]: item for item in streams}
+    counts = collect_status_counts(primary_events)
+    legend = "".join(
+        f"<span class=\"legend-chip\"><i class=\"legend-dot {meta['class']}\"></i>{html.escape(meta['label'])}</span>"
+        for meta in STATUS_META.values()
+    )
+    hero_range = f"{days[0]:%b %d} - {days[-1]:%b %d, %Y}"
+    today = today_context["primary_events"][0]["start"].date() if today_context["primary_events"] else dt.datetime.now().date()
+    css = load_css("dashboard.css")
+    gantt_columns_css = f".gantt-grid {{ grid-template-columns: repeat({len(days)}, minmax(120px, 1fr)); }}"
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{html.escape(project_name)} Planner</title>
+  <style>
+    {css}
+    {gantt_columns_css}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <p class="kicker">Research Planner Template</p>
+          <h1>{html.escape(project_name)}</h1>
+          <p>{html.escape(hero_range)}. Short window for execution, review, and rolling replanning.</p>
+        </div>
+        <div class="legend-bar">{legend}</div>
+      </div>
+      <div class="hero-stats">
+        <article class="stat-card"><span>Completed / Partial</span><strong>{counts['completed'] + counts['partial']}</strong></article>
+        <article class="stat-card"><span>Moved / Incomplete</span><strong>{counts['moved'] + counts['incomplete']}</strong></article>
+        <article class="stat-card"><span>Conditional</span><strong>{counts['conditional']}</strong></article>
+        <article class="stat-card"><span>Pending Sync</span><strong>{counts['pending_sync'] + counts['unsynced']}</strong></article>
+      </div>
+    </section>
+    {render_filter_controls(streams)}
+    {render_gantt(primary_events, streams, days)}
+    {render_today_plan(today_context, today)}
+    {render_conditional_panel(conditional_items)}
+    {render_experiment_timelines(plan, primary_events, stream_map)}
+  </div>
+  {render_filter_script(today.isoformat())}
 </body>
 </html>"""
 

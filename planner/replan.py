@@ -300,27 +300,12 @@ def apply_suggestion_to_events(events: list[dict[str, Any]], changes: list[dict[
     return updated
 
 
-def build_replan(
-    *,
-    plan: dict[str, Any],
-    status_log: dict[str, Any],
-    constraints: dict[str, Any],
-    calendar_events: list[dict[str, Any]],
+def resolve_candidate_task_ids(
     candidates: list[dict[str, Any]],
-    report_date: dt.date,
-    tz: ZoneInfo,
-    apply: bool,
-    plan_path: Path,
-    calendar_events_path: Path,
-    provider: str,
-) -> dict[str, Any]:
-    plan = normalize_plan_details(plan)
-    status_log = normalize_status_log(status_log)
-    calendar_events = normalize_calendar_events(calendar_events, plan)
-    plan_index = build_task_index(plan)
-    by_dependency = reverse_dependencies(plan_index)
-
-    root_candidates = seed_candidate_map(plan, status_log)
+    plan_index: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """Match candidates to plan tasks by title or alias and return a task_id-keyed map."""
+    result: dict[str, dict[str, Any]] = {}
     for candidate in candidates:
         if candidate.get("status") not in {"moved", "incomplete"}:
             continue
@@ -337,7 +322,151 @@ def build_replan(
                     break
         if task_id:
             candidate["task_id"] = task_id
-            root_candidates[task_id] = candidate
+            result[task_id] = candidate
+    return result
+
+
+def reschedule_task(
+    *,
+    task_id: str,
+    descriptor: dict[str, Any],
+    status_entry: dict[str, Any],
+    calendar_events: list[dict[str, Any]],
+    constraints: dict[str, Any],
+    tz: ZoneInfo,
+    provider: str,
+    by_dependency: dict[str, list[str]],
+) -> dict[str, Any]:
+    """Compute a rescheduling suggestion for a single task."""
+    source_date = task_source_date(descriptor)
+    reason = status_entry.get("note") or "Reported as incomplete and needs rescheduling."
+
+    reference_event = event_for_task(task_id, calendar_events, task_title(descriptor))
+    preferred_start = dt.time(9, 0)
+    duration_minutes = 60
+    skip_event_ids: set[str] = set()
+    if reference_event:
+        start_dt = dt.datetime.fromisoformat(reference_event["start"]).astimezone(tz)
+        end_dt = dt.datetime.fromisoformat(reference_event["end"]).astimezone(tz)
+        preferred_start = start_dt.time().replace(second=0, microsecond=0)
+        duration_minutes = max(int((end_dt - start_dt).total_seconds() // 60), 30)
+        if reference_event.get("event_id"):
+            skip_event_ids.add(reference_event["event_id"])
+
+    requested_day = source_date + dt.timedelta(days=1)
+    if status_entry.get("requested_day"):
+        requested_day = dt.date.fromisoformat(status_entry["requested_day"])
+
+    suggested_start, suggested_end, slot_warnings = find_slot(
+        start_day=requested_day,
+        preferred_start=preferred_start,
+        duration_minutes=duration_minutes,
+        constraints=constraints,
+        events=calendar_events,
+        tz=tz,
+        skip_event_ids=skip_event_ids,
+    )
+    return {
+        "task_id": task_id,
+        "title": task_title(descriptor),
+        "current_date": source_date.isoformat(),
+        "suggested_date": suggested_start.date().isoformat(),
+        "suggested_start": suggested_start.isoformat(),
+        "suggested_end": suggested_end.isoformat(),
+        "reason": reason,
+        "depends_on": descriptor.get("depends_on", []),
+        "follow_on_tasks": by_dependency.get(task_id, []),
+        "apply_targets": ["plan_details"] + (["calendar_events"] if provider == "file" else []),
+        "slot_warnings": slot_warnings,
+    }
+
+
+def enqueue_dependents(
+    *,
+    task_id: str,
+    descriptor: dict[str, Any],
+    suggested_start: dt.datetime,
+    dependent_ids: list[str],
+    plan_index: dict[str, dict[str, Any]],
+    planned_updates: dict[str, dict[str, Any]],
+    root_candidates: dict[str, dict[str, Any]],
+    blocked: list[dict[str, Any]],
+    queue: deque[str],
+) -> None:
+    """Enqueue dependent tasks for rescheduling or add them to the blocked list."""
+    source_date = task_source_date(descriptor)
+    for dependent_id in dependent_ids:
+        if dependent_id in planned_updates:
+            continue
+        dependent = plan_index.get(dependent_id)
+        if not dependent:
+            continue
+        dependency_note = f"Dependency {task_title(descriptor)} moved to {suggested_start.date().isoformat()}."
+        dependent_source_date = task_source_date(dependent)
+        offset_days = (dependent_source_date - source_date).days
+        requested_day = suggested_start.date() + dt.timedelta(days=offset_days)
+        root_candidates.setdefault(
+            dependent_id,
+            {
+                "task_id": dependent_id,
+                "status": "moved",
+                "note": dependency_note,
+                "requested_day": requested_day.isoformat(),
+            },
+        )
+        if dependent.get("hard_timepoint"):
+            blocked.append(
+                {
+                    "task_id": dependent_id,
+                    "title": task_title(dependent),
+                    "current_date": task_source_date(dependent).isoformat(),
+                    "reason": f"{dependency_note} Follow-on task is a hard timepoint and needs manual review.",
+                }
+            )
+            continue
+        queue.append(dependent_id)
+
+
+def write_replan_results(
+    *,
+    plan: dict[str, Any],
+    calendar_events: list[dict[str, Any]],
+    changes: list[dict[str, Any]],
+    plan_path: Path,
+    calendar_events_path: Path,
+    provider: str,
+) -> None:
+    """Persist replan changes to plan details and optionally calendar events."""
+    updated_plan = apply_suggestion_to_plan(plan, changes)
+    plan_path.write_text(json.dumps(updated_plan, ensure_ascii=False, indent=2), encoding="utf-8")
+    if provider == "file" and calendar_events_path.exists():
+        updated_events = apply_suggestion_to_events(calendar_events, changes)
+        calendar_events_path.write_text(json.dumps(updated_events, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def build_replan(
+    *,
+    plan: dict[str, Any],
+    status_log: dict[str, Any],
+    constraints: dict[str, Any],
+    calendar_events: list[dict[str, Any]],
+    candidates: list[dict[str, Any]],
+    report_date: dt.date,
+    tz: ZoneInfo,
+    apply: bool,
+    plan_path: Path,
+    calendar_events_path: Path,
+    provider: str,
+) -> dict[str, Any]:
+    """Build a full replan suggestion, processing tasks and their dependencies."""
+    plan = normalize_plan_details(plan)
+    status_log = normalize_status_log(status_log)
+    calendar_events = normalize_calendar_events(calendar_events, plan)
+    plan_index = build_task_index(plan)
+    by_dependency = reverse_dependencies(plan_index)
+
+    root_candidates = seed_candidate_map(plan, status_log)
+    root_candidates.update(resolve_candidate_task_ids(candidates, plan_index))
 
     changes: list[dict[str, Any]] = []
     blocked: list[dict[str, Any]] = []
@@ -353,94 +482,34 @@ def build_replan(
         if not descriptor:
             warnings.append(f"Unable to find task metadata for {task_id}.")
             continue
-        source_date = task_source_date(descriptor)
-        status_entry = root_candidates.get(task_id, {})
-        reason = status_entry.get("note") or "Reported as incomplete and needs rescheduling."
 
         if descriptor.get("hard_timepoint"):
-            blocked.append(
-                {
-                    "task_id": task_id,
-                    "title": task_title(descriptor),
-                    "current_date": source_date.isoformat(),
-                    "reason": "This task is marked as a hard timepoint and was not moved automatically.",
-                }
-            )
+            blocked.append({
+                "task_id": task_id,
+                "title": task_title(descriptor),
+                "current_date": task_source_date(descriptor).isoformat(),
+                "reason": "This task is marked as a hard timepoint and was not moved automatically.",
+            })
             continue
 
-        reference_event = event_for_task(task_id, calendar_events, task_title(descriptor))
-        preferred_start = dt.time(9, 0)
-        duration_minutes = 60
-        skip_event_ids: set[str] = set()
-        if reference_event:
-            start_dt = dt.datetime.fromisoformat(reference_event["start"]).astimezone(tz)
-            end_dt = dt.datetime.fromisoformat(reference_event["end"]).astimezone(tz)
-            preferred_start = start_dt.time().replace(second=0, microsecond=0)
-            duration_minutes = max(int((end_dt - start_dt).total_seconds() // 60), 30)
-            if reference_event.get("event_id"):
-                skip_event_ids.add(reference_event["event_id"])
-
-        requested_day = source_date + dt.timedelta(days=1)
-        if status_entry.get("requested_day"):
-            requested_day = dt.date.fromisoformat(status_entry["requested_day"])
-
-        suggested_start, suggested_end, slot_warnings = find_slot(
-            start_day=requested_day,
-            preferred_start=preferred_start,
-            duration_minutes=duration_minutes,
-            constraints=constraints,
-            events=calendar_events,
-            tz=tz,
-            skip_event_ids=skip_event_ids,
+        change = reschedule_task(
+            task_id=task_id, descriptor=descriptor,
+            status_entry=root_candidates.get(task_id, {}),
+            calendar_events=calendar_events, constraints=constraints,
+            tz=tz, provider=provider, by_dependency=by_dependency,
         )
-        warnings.extend(slot_warnings)
-
-        dependent_ids = by_dependency.get(task_id, [])
-        change = {
-            "task_id": task_id,
-            "title": task_title(descriptor),
-            "current_date": source_date.isoformat(),
-            "suggested_date": suggested_start.date().isoformat(),
-            "suggested_start": suggested_start.isoformat(),
-            "suggested_end": suggested_end.isoformat(),
-            "reason": reason,
-            "depends_on": descriptor.get("depends_on", []),
-            "follow_on_tasks": dependent_ids,
-            "apply_targets": ["plan_details"] + (["calendar_events"] if provider == "file" else []),
-        }
+        warnings.extend(change.pop("slot_warnings"))
         planned_updates[task_id] = change
         changes.append(change)
 
-        for dependent_id in dependent_ids:
-            if dependent_id in planned_updates:
-                continue
-            dependent = plan_index.get(dependent_id)
-            if not dependent:
-                continue
-            dependency_note = f"Dependency {task_title(descriptor)} moved to {suggested_start.date().isoformat()}."
-            dependent_source_date = task_source_date(dependent)
-            offset_days = (dependent_source_date - source_date).days
-            requested_day = suggested_start.date() + dt.timedelta(days=offset_days)
-            root_candidates.setdefault(
-                dependent_id,
-                {
-                    "task_id": dependent_id,
-                    "status": "moved",
-                    "note": dependency_note,
-                    "requested_day": requested_day.isoformat(),
-                },
-            )
-            if dependent.get("hard_timepoint"):
-                blocked.append(
-                    {
-                        "task_id": dependent_id,
-                        "title": task_title(dependent),
-                        "current_date": task_source_date(dependent).isoformat(),
-                        "reason": f"{dependency_note} Follow-on task is a hard timepoint and needs manual review.",
-                    }
-                )
-                continue
-            queue.append(dependent_id)
+        suggested_start = dt.datetime.fromisoformat(change["suggested_start"])
+        enqueue_dependents(
+            task_id=task_id, descriptor=descriptor,
+            suggested_start=suggested_start,
+            dependent_ids=change["follow_on_tasks"],
+            plan_index=plan_index, planned_updates=planned_updates,
+            root_candidates=root_candidates, blocked=blocked, queue=queue,
+        )
 
     suggestion = {
         "report_date": report_date.isoformat(),
@@ -450,11 +519,11 @@ def build_replan(
     }
 
     if apply and changes:
-        updated_plan = apply_suggestion_to_plan(plan, changes)
-        plan_path.write_text(json.dumps(updated_plan, ensure_ascii=False, indent=2), encoding="utf-8")
-        if provider == "file" and calendar_events_path.exists():
-            updated_events = apply_suggestion_to_events(calendar_events, changes)
-            calendar_events_path.write_text(json.dumps(updated_events, ensure_ascii=False, indent=2), encoding="utf-8")
+        write_replan_results(
+            plan=plan, calendar_events=calendar_events, changes=changes,
+            plan_path=plan_path, calendar_events_path=calendar_events_path,
+            provider=provider,
+        )
 
     return suggestion
 
