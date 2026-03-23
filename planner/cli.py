@@ -104,10 +104,6 @@ def run_module(module: str, args: list[str]) -> None:
     subprocess.run([sys.executable, "-m", module, *args], check=True)
 
 
-def today_iso(tz_name: str) -> str:
-    return dt.datetime.now(dt.timezone.utc).astimezone(ZoneInfo(tz_name)).date().isoformat()
-
-
 def prepare_report(paths, project_config: dict[str, str]) -> Path:
     ensure_workspace_dirs(paths)
     today = dt.datetime.now(dt.timezone.utc).astimezone(ZoneInfo(project_config["timezone"])).date().isoformat()
@@ -468,11 +464,9 @@ def refresh_demo_assets(paths, *, skip_screenshots: bool = False) -> int:
     return 0
 
 
-def main() -> int:
-    args = parse_args()
-    paths = build_paths(args.workspace)
-
-    if args.command == "init":
+def dispatch_standalone(command: str, args: argparse.Namespace, paths) -> int | None:
+    """Handle commands that don't require a loaded workspace config."""
+    if command == "init":
         source = template_sources()["blank" if args.mode == "blank" else "demo"]
         if not source.exists():
             raise SystemExit(f"Missing init source: {source}")
@@ -480,31 +474,25 @@ def main() -> int:
         configure_initialized_workspace(paths, args)
         print(paths.root)
         return 0
-
-    if args.command == "doctor":
+    if command == "doctor":
         return doctor(paths, json_mode=args.json)
-
-    if args.command == "refresh-demo-assets":
+    if command == "refresh-demo-assets":
         return refresh_demo_assets(paths, skip_screenshots=args.skip_screenshots)
+    return None
 
-    configs = load_configs(paths) if paths.root.exists() else None
 
-    if configs is None:
-        raise SystemExit(f"Workspace not found: {paths.root}. Run `research-planner init --mode blank` first.")
-
-    if args.command == "prepare-report":
+def dispatch_workspace(command: str, args: argparse.Namespace, paths, configs: dict[str, dict]) -> int:
+    """Handle commands that require a loaded workspace config."""
+    if command == "prepare-report":
         prepare_report(paths, configs["project"])
         return 0
-
-    if args.command == "refresh":
+    if command == "refresh":
         print(refresh_dashboard(paths, configs))
         return 0
-
-    if args.command == "ingest-report":
+    if command == "ingest-report":
         ingest_report(paths, configs, Path(args.input).expanduser().resolve(), replan_mode=args.replan)
         return 0
-
-    if args.command == "replan":
+    if command == "replan":
         integrations = integration_settings(paths, configs)
         run_args = [
             "--input",
@@ -524,12 +512,25 @@ def main() -> int:
         if args.apply:
             refresh_dashboard(paths, configs)
         return 0
-
-    if args.command == "summary":
+    if command == "summary":
         print(generate_summary(paths, configs, args.period, args.target))
         return 0
+    raise SystemExit(f"Unknown command: {command}")
 
-    raise SystemExit(f"Unknown command: {args.command}")
+
+def main() -> int:
+    args = parse_args()
+    paths = build_paths(args.workspace)
+
+    result = dispatch_standalone(args.command, args, paths)
+    if result is not None:
+        return result
+
+    configs = load_configs(paths) if paths.root.exists() else None
+    if configs is None:
+        raise SystemExit(f"Workspace not found: {paths.root}. Run `research-planner init --mode blank` first.")
+
+    return dispatch_workspace(args.command, args, paths, configs)
 
 
 if __name__ == "__main__":

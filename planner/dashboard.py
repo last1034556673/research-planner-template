@@ -14,7 +14,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from .calendar_io import load_event_records
-from .planner_data import event_matches_status_entry, normalize_calendar_events, normalize_plan_details, normalize_status_log
+from .planner_data import compact_title, event_matches_status_entry, normalize_calendar_events, normalize_match_text, normalize_plan_details, normalize_status_log, score_event_match
 from .templates import load_css
 
 
@@ -133,12 +133,6 @@ def is_conditional(title: str) -> bool:
     return any(marker in title_lower or marker in title for marker in markers)
 
 
-def compact_title(title: str) -> str:
-    title = re.sub(r"\s*\[[^\]]+\]\s*$", "", title).strip()
-    title = re.sub(r"^[^\w\u4e00-\u9fff]+", "", title).strip()
-    return title
-
-
 def clip_text(text: str, limit: int = 40) -> str:
     if len(text) <= limit:
         return text
@@ -174,25 +168,6 @@ def parse_event(record: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:
 def visible_primary(event: dict[str, Any]) -> bool:
     title_lower = event["title"].lower()
     return not any(keyword.lower() in title_lower for keyword in DISPLAY_EXCLUDE_KEYWORDS)
-
-
-def normalize_match_text(text: str) -> str:
-    text = compact_title(text)
-    return re.sub(r"[\s\[\]（）()【】:：,，.。+＋/_-]+", "", text).lower()
-
-
-def score_event_match(text: str, event: dict[str, Any]) -> int:
-    left = normalize_match_text(text)
-    right = normalize_match_text(event["title"])
-    if not left or not right:
-        return -1
-    if left == right:
-        return 100
-    if left in right or right in left:
-        return 80
-    left_tokens = set(re.findall(r"[\u4e00-\u9fffA-Za-z0-9]+", left))
-    right_tokens = set(re.findall(r"[\u4e00-\u9fffA-Za-z0-9]+", right))
-    return len(left_tokens & right_tokens) * 10
 
 
 def best_event_match(text: str, events: list[dict[str, Any]]) -> dict[str, Any] | None:

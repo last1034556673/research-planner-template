@@ -153,7 +153,7 @@ def render_reason_bars(counts: list[tuple[str, int]]) -> str:
         rows.append(
             "<div class=\"reason-row\">"
             f"<div class=\"reason-label\">{html.escape(reason)}</div>"
-            f"<div class=\"reason-track\"><div class=\"reason-fill\" style=\"width:{width}%\"></div></div>"
+            f"<div class=\"reason-track\"><div class=\"reason-fill\" style=\"--w:{width}%\"></div></div>"
             f"<div class=\"reason-value\">{count}</div>"
             "</div>"
         )

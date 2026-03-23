@@ -9,7 +9,6 @@ import yaml
 from planner.config import (
     integration_settings,
     load_configs,
-    merged_streams_from_config,
     resolve_workspace_path,
 )
 from planner.workspace import build_paths
@@ -82,36 +81,6 @@ class IntegrationSettingsTests(unittest.TestCase):
         }
         result = integration_settings(paths, configs)
         self.assertEqual(result["event_source_path"], Path("/tmp/test_ws/data/custom.json"))
-
-
-class MergedStreamsFromConfigTests(unittest.TestCase):
-    def test_extracts_id_and_label(self) -> None:
-        configs = {
-            "workstreams": {
-                "streams": [
-                    {"id": "cell", "label": "Cell Work", "color": "#000"},
-                    {"id": "rna", "label": "RNA Analysis"},
-                ]
-            }
-        }
-        result = merged_streams_from_config(configs)
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "cell")
-        self.assertEqual(result[0]["label"], "Cell Work")
-
-    def test_filters_incomplete_streams(self) -> None:
-        configs = {
-            "workstreams": {
-                "streams": [
-                    {"id": "cell"},
-                    {"label": "No ID"},
-                    {"id": "valid", "label": "Valid"},
-                ]
-            }
-        }
-        result = merged_streams_from_config(configs)
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["id"], "valid")
 
 
 if __name__ == "__main__":

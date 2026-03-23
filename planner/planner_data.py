@@ -17,9 +17,37 @@ def compact_text(text: str) -> str:
     return re.sub(r"\s+", " ", (text or "").strip())
 
 
+def compact_title(text: str) -> str:
+    """Strip bracket suffixes and leading non-word characters from event titles."""
+    text = re.sub(r"\s*\[[^\]]+\]\s*$", "", text).strip()
+    text = re.sub(r"^[^\w\u4e00-\u9fff]+", "", text).strip()
+    return text
+
+
 def compact_match_text(text: str) -> str:
     text = compact_text(text)
     return re.sub(r"[\s\[\]（）()【】:：,，.。+＋/_-]+", "", text).lower()
+
+
+def normalize_match_text(text: str) -> str:
+    """Normalize event title text for fuzzy matching."""
+    text = compact_title(text)
+    return re.sub(r"[\s\[\]（）()【】:：,，.。+＋/_-]+", "", text).lower()
+
+
+def score_event_match(text: str, event: dict[str, Any]) -> int:
+    """Score how well a text fragment matches an event title (0-100)."""
+    left = normalize_match_text(text)
+    right = normalize_match_text(event["title"])
+    if not left or not right:
+        return -1
+    if left == right:
+        return 100
+    if left in right or right in left:
+        return 80
+    left_tokens = set(re.findall(r"[\u4e00-\u9fffA-Za-z0-9]+", left))
+    right_tokens = set(re.findall(r"[\u4e00-\u9fffA-Za-z0-9]+", right))
+    return len(left_tokens & right_tokens) * 10
 
 
 def normalize_aliases(value: Any) -> list[str]:

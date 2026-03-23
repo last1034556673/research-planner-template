@@ -97,12 +97,3 @@ def integration_settings(paths: WorkspacePaths, configs: dict[str, Any]) -> dict
     return integrations
 
 
-def merged_streams_from_config(configs: dict[str, Any]) -> list[dict[str, Any]]:
-    streams = []
-    for stream in configs["workstreams"].get("streams", []):
-        stream_id = stream.get("id")
-        label = stream.get("label")
-        if not stream_id or not label:
-            continue
-        streams.append({"id": stream_id, "label": label})
-    return streams

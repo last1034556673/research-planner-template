@@ -459,6 +459,22 @@ def build_replan(
     return suggestion
 
 
+def collect_replan_candidates(
+    *,
+    payload: dict[str, Any],
+    primary_events: list[dict[str, Any]],
+    plan_index: dict[str, dict[str, Any]],
+    report_date: dt.date,
+) -> list[dict[str, Any]]:
+    """Gather status candidates from report and plan for replanning."""
+    candidates = infer_status_candidates(payload, primary_events)
+    known_task_ids = {candidate.get("task_id") for candidate in candidates if candidate.get("task_id")}
+    for candidate in fallback_candidates_from_payload(payload, plan_index, report_date):
+        if candidate.get("task_id") not in known_task_ids:
+            candidates.append(candidate)
+    return candidates
+
+
 def main() -> int:
     args = parse_args()
     workspace_root = Path(args.workspace_root).expanduser().resolve()
@@ -468,49 +484,33 @@ def main() -> int:
     provider = normalize_calendar_provider(args.calendar_provider or integrations["calendar_provider"])
     events_file = Path(args.events_file).expanduser().resolve() if args.events_file else integrations["event_source_path"]
     calendar_script = Path(args.calendar_script).expanduser().resolve() if args.calendar_script else integrations["calendar_script"]
-
-    raw_report = load_text(Path(args.input).expanduser().resolve())
-    report_date_text = detect_report_date(raw_report) or dt.datetime.now(dt.timezone.utc).astimezone(ZoneInfo(configs["project"]["timezone"])).date().isoformat()
-    report_date = dt.date.fromisoformat(report_date_text)
-    payload = parse_daily_report(raw_report, report_date_text)
     tz = ZoneInfo(configs["project"]["timezone"])
 
+    raw_report = load_text(Path(args.input).expanduser().resolve())
+    report_date_text = detect_report_date(raw_report) or dt.datetime.now(dt.timezone.utc).astimezone(tz).date().isoformat()
+    report_date = dt.date.fromisoformat(report_date_text)
+    payload = parse_daily_report(raw_report, report_date_text)
+
     primary_events = collect_events(
-        report_date=report_date,
-        tz=tz,
-        calendar=integrations["primary_calendar_name"],
-        provider=provider,
-        events_file=events_file,
-        calendar_script=calendar_script,
+        report_date=report_date, tz=tz, calendar=integrations["primary_calendar_name"],
+        provider=provider, events_file=events_file, calendar_script=calendar_script,
     )
     plan = load_json(paths.plan_details, {"streams": [], "experiments": [], "days": []})
     plan_index = build_task_index(normalize_plan_details(plan))
-    candidates = infer_status_candidates(payload, primary_events)
-    known_task_ids = {candidate.get("task_id") for candidate in candidates if candidate.get("task_id")}
-    for candidate in fallback_candidates_from_payload(payload, plan_index, report_date):
-        if candidate.get("task_id") not in known_task_ids:
-            candidates.append(candidate)
+    candidates = collect_replan_candidates(
+        payload=payload, primary_events=primary_events, plan_index=plan_index, report_date=report_date,
+    )
     status_log = load_json(paths.status_log, {"statuses": []})
     calendar_events = load_event_records(
         start=dt.datetime.combine(report_date - dt.timedelta(days=14), dt.time.min, tzinfo=tz),
         end=dt.datetime.combine(report_date + dt.timedelta(days=30), dt.time.min, tzinfo=tz),
-        tz_name=tz.key,
-        provider=provider,
-        events_file=events_file,
-        calendar_script=calendar_script,
+        tz_name=tz.key, provider=provider, events_file=events_file, calendar_script=calendar_script,
     )
     suggestion = build_replan(
-        plan=plan,
-        status_log=status_log,
-        constraints=configs["constraints"],
-        calendar_events=calendar_events,
-        candidates=candidates,
-        report_date=report_date,
-        tz=tz,
-        apply=args.apply,
-        plan_path=paths.plan_details,
-        calendar_events_path=events_file,
-        provider=provider,
+        plan=plan, status_log=status_log, constraints=configs["constraints"],
+        calendar_events=calendar_events, candidates=candidates, report_date=report_date,
+        tz=tz, apply=args.apply, plan_path=paths.plan_details,
+        calendar_events_path=events_file, provider=provider,
     )
 
     output_path = Path(args.output).expanduser().resolve() if args.output else paths.replan_suggestions_dir / f"{report_date.isoformat()}.json"

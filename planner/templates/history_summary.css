@@ -145,6 +145,7 @@ body {
 }
 .reason-fill {
   height: 100%;
+  width: var(--w, 0%);
   background: linear-gradient(90deg, #c5774f, #8f5d33);
   border-radius: 999px;
 }

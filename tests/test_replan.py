@@ -10,6 +10,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEMO_SEED = REPO_ROOT / "examples" / "wetlab_demo" / "workspace_seed"
+DEMO_REPORT_DATE = "2026-03-15"
 
 
 class ReplanTests(unittest.TestCase):
@@ -31,16 +32,16 @@ class ReplanTests(unittest.TestCase):
         )
 
     def test_replan_suggest_generates_follow_on_change(self) -> None:
-        self.run_cli("replan", "--input", str(self.workspace / "daily_reports" / "2026-03-15.md"))
-        payload = json.loads((self.workspace / "outputs" / "replan_suggestions" / "2026-03-15.json").read_text())
-        self.assertEqual(payload["report_date"], "2026-03-15")
+        self.run_cli("replan", "--input", str(self.workspace / "daily_reports" / f"{DEMO_REPORT_DATE}.md"))
+        payload = json.loads((self.workspace / "outputs" / "replan_suggestions" / f"{DEMO_REPORT_DATE}.json").read_text())
+        self.assertEqual(payload["report_date"], DEMO_REPORT_DATE)
         self.assertGreaterEqual(len(payload["changes"]), 1)
         first = payload["changes"][0]
         self.assertEqual(first["title"], "Expand GFP reporter culture 5 flasks to 10 flasks")
         self.assertIn("task-976cfa0215", first["follow_on_tasks"])
 
     def test_replan_apply_updates_plan_and_calendar(self) -> None:
-        self.run_cli("replan", "--input", str(self.workspace / "daily_reports" / "2026-03-15.md"), "--apply")
+        self.run_cli("replan", "--input", str(self.workspace / "daily_reports" / f"{DEMO_REPORT_DATE}.md"), "--apply")
         plan = json.loads((self.workspace / "data" / "plan_details.json").read_text())
         events = json.loads((self.workspace / "data" / "calendar_events.json").read_text())
         updated_step = next(
