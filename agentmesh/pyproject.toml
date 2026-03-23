@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentmesh"
+version = "0.1.0"
+description = "Minimal-constraint multi-model AI agent framework. Agents communicate autonomously — you define who they are, they figure out who to talk to."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.30"]
+openai = ["openai>=1.30"]
+ollama = ["aiohttp>=3.9"]
+all = ["anthropic>=0.30", "openai>=1.30", "aiohttp>=3.9"]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+
+[tool.setuptools.packages.find]
+include = ["agentmesh*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
